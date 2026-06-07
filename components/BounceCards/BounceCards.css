@@ -1,0 +1,56 @@
+.bounceCardsContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  overflow: visible;
+}
+
+.hero-gallery {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  overflow: visible;
+}
+
+.bounceCardsContainer .card {
+  position: absolute;
+  width: 180px;
+  aspect-ratio: 4 / 5;
+  border: 6px solid #fffaf3;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 14px 30px rgba(68, 43, 31, 0.18);
+  background: #fffaf3;
+  will-change: transform;
+  cursor: default;
+}
+
+.bounceCardsContainer .card .image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+
+.marla-hero-bounce-cards .card {
+  width: 220px;
+}
+
+@media (max-width: 768px) {
+  .marla-hero-bounce-cards .card {
+    width: 185px;
+  }
+}
+
+@media (max-width: 480px) {
+  .marla-hero-bounce-cards .card {
+    width: 170px;
+  }
+}

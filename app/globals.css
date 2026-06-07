@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 36 44% 94%;
+    --foreground: 24 24% 12%;
+    --card: 39 100% 97%;
+    --card-foreground: 24 24% 12%;
+    --popover: 39 100% 97%;
+    --popover-foreground: 24 24% 12%;
+    --primary: 18 29% 27%;
+    --primary-foreground: 39 100% 97%;
+    --secondary: 36 35% 92%;
+    --secondary-foreground: 24 24% 12%;
+    --muted: 36 28% 90%;
+    --muted-foreground: 18 16% 42%;
+    --accent: 28 52% 56%;
+    --accent-foreground: 24 24% 12%;
+    --destructive: 9 38% 55%;
+    --destructive-foreground: 39 100% 97%;
+    --border: 24 14% 84%;
+    --input: 24 14% 84%;
+    --ring: 28 52% 56%;
+    --radius: 0.5rem;
+    --interactive-hover: 36 40% 95%;
+    --interactive-hover-border: 28 24% 74%;
+    --interactive-selected: 28 52% 56%;
+    --status-received: 36 12% 88%;
+    --status-progress: 32 78% 88%;
+    --status-ready: 100 18% 86%;
+    --status-completed: 100 12% 90%;
+    --status-cancelled: 9 55% 92%;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-family:
+      var(--font-sans),
+      "Google Sans",
+      var(--font-thai),
+      "IBM Plex Sans Thai",
+      sans-serif;
+    font-feature-settings: "kern" 1, "liga" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground font-normal antialiased;
+    margin: 0;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(201, 137, 85, 0.16), transparent 26rem),
+      radial-gradient(circle at 90% 20%, rgba(141, 155, 129, 0.16), transparent 24rem),
+      hsl(var(--background));
+  }
+
+  body::before {
+    pointer-events: none;
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    opacity: 0.16;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+
+  /* Headings — 700–800 */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-bold tracking-tight text-foreground;
+  }
+
+  h1 {
+    @apply font-extrabold;
+  }
+
+  /* Labels — 500–600 */
+  label {
+    @apply font-semibold;
+  }
+
+  /* Navigation inherits global stack; medium weight for calm editorial feel */
+  nav {
+    @apply font-medium;
+  }
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  /* Legacy aliases — map to shadcn tokens for gradual migration */
+  .field {
+    @apply flex h-11 w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background transition file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .label {
+    @apply mb-2 block text-sm font-semibold text-muted-foreground;
+  }
+
+  /* Buttons — 600–700 */
+  .primary-button {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-bold text-primary-foreground transition duration-150 ease-out hover:bg-primary/85 active:bg-primary/95 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .secondary-button {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-md border border-input bg-card px-5 text-sm font-semibold text-foreground transition duration-150 ease-out hover:border-accent/30 hover:bg-accent/[0.04] active:bg-accent/[0.08] disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .surface {
+    @apply rounded-lg border border-border bg-card text-card-foreground shadow-soft;
+  }
+
+  .admin-shell {
+    @apply min-h-screen bg-[#ece7df] text-foreground;
+  }
+
+  .admin-panel {
+    @apply rounded-xl border border-border bg-card shadow-soft;
+  }
+
+  .admin-table {
+    @apply w-full min-w-[920px] text-left text-sm;
+  }
+
+  .admin-table thead {
+    @apply bg-muted text-xs uppercase tracking-[0.14em] text-muted-foreground;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    @apply px-4 py-3 align-middle;
+  }
+
+  .admin-table tbody tr {
+    @apply border-t border-border transition-colors duration-150 ease-out hover:bg-accent/[0.04];
+  }
+
+  .admin-tab {
+    @apply rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition;
+  }
+
+  .admin-tab-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .admin-toast {
+    @apply fixed bottom-6 right-6 z-[100] rounded-lg px-4 py-3 text-sm font-semibold shadow-soft;
+  }
+
+  .hover-surface {
+    @apply transition-[background-color,border-color,box-shadow] duration-150 ease-out hover:border-accent/30 hover:bg-accent/[0.04] hover:shadow-sm;
+  }
+
+  .hover-row {
+    @apply transition-colors duration-150 ease-out hover:bg-accent/[0.05];
+  }
+}
