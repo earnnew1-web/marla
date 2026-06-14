@@ -2,6 +2,7 @@ import type { OrderStatus } from "@/lib/types";
 
 export type LineStatusKey =
   | "order_received"
+  | "pending_payment_confirmation"
   | "received"
   | "developing_scanning"
   | "ready"
@@ -14,8 +15,13 @@ export const LINE_STATUS_COPY: Record<
 > = {
   order_received: {
     title: "รับออเดอร์เรียบร้อยแล้ว",
-    statusLabel: "รับฟิล์ม",
+    statusLabel: "รับออเดอร์แล้ว",
     description: "Marla Film Lab ได้รับออเดอร์ของคุณแล้ว เราจะดำเนินการล้างและสแกนฟิล์มให้เร็วที่สุด"
+  },
+  pending_payment_confirmation: {
+    title: "รับออเดอร์เรียบร้อยแล้ว",
+    statusLabel: "รอชำระเงิน",
+    description: "เราได้รับออเดอร์ของคุณแล้ว กรุณาชำระเงินที่หน้าร้านเมื่อมาส่งฟิล์ม"
   },
   received: {
     title: "อัปเดตสถานะออเดอร์",
@@ -46,6 +52,8 @@ export const LINE_STATUS_COPY: Record<
 
 export function orderStatusToLineKey(status: OrderStatus): LineStatusKey | null {
   switch (status) {
+    case "Pending Payment Confirmation":
+      return "pending_payment_confirmation";
     case "Received":
       return "received";
     case "Developing+Scanning":
@@ -69,6 +77,8 @@ export function parseLineStatusInput(status: string): LineStatusKey | null {
   }
 
   const fromOrderStatus: Record<string, LineStatusKey> = {
+    "pending payment confirmation": "pending_payment_confirmation",
+    pending_payment_confirmation: "pending_payment_confirmation",
     received: "received",
     "developing+scanning": "developing_scanning",
     "developing_scanning": "developing_scanning",
@@ -79,4 +89,16 @@ export function parseLineStatusInput(status: string): LineStatusKey | null {
   };
 
   return fromOrderStatus[normalized] ?? null;
+}
+
+/** LINE status key for the confirmation Flex sent right after order submit. */
+export function resolveSubmitLineStatusKey(status: OrderStatus): LineStatusKey {
+  switch (status) {
+    case "Pending Payment Confirmation":
+      return "pending_payment_confirmation";
+    case "Received":
+      return "order_received";
+    default:
+      return orderStatusToLineKey(status) ?? "order_received";
+  }
 }

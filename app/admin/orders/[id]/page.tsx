@@ -190,7 +190,7 @@ export default function AdminOrderDetailPage() {
                   label="LINE ID"
                   value={
                     order.customer.lineConnected
-                      ? order.customer.lineDisplayName || order.customer.lineId || "Connected"
+                      ? order.customer.lineId || order.customer.lineDisplayName || "Connected"
                       : order.customer.lineId || "—"
                   }
                 />

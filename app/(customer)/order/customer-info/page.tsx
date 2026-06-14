@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
 import { FilmDeliveryMethodSection } from "@/components/customer/FilmDeliveryMethodSection";
@@ -47,7 +47,6 @@ export default function CustomerInfoPage() {
   const [filmDeliveryMethod, setFilmDeliveryMethod] = useState<FilmDeliveryMethod>(DEFAULT_FILM_DELIVERY_METHOD);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const lineIdTouchedRef = useRef(false);
 
   useEffect(() => {
     const draft = loadDraft();
@@ -57,7 +56,7 @@ export default function CustomerInfoPage() {
     setForm({
       name: draft.customer.name,
       phone: draft.customer.phone,
-      lineId: draft.customer.lineId ?? draft.customer.lineDisplayName ?? "",
+      lineId: draft.customer.lineId ?? "",
       email: draft.customer.email ?? "",
       allowSocialShare: draft.customer.allowSocialShare ?? false,
       instagramUsername: draft.customer.instagramUsername ?? ""
@@ -67,26 +66,13 @@ export default function CustomerInfoPage() {
   useEffect(() => {
     if (!profile?.userId) return;
 
-    setForm((current) => {
-      const nextLineId = lineIdTouchedRef.current ? current.lineId : profile.displayName;
-
-      const draft = loadDraft();
-      saveDraft({
-        ...draft,
-        customer: applyLineProfileToCustomer(
-          {
-            ...(draft.customer ?? {
-              name: current.name,
-              phone: current.phone,
-              email: current.email
-            }),
-            lineId: nextLineId
-          },
-          profile
-        )
-      });
-
-      return current.lineId === nextLineId ? current : { ...current, lineId: nextLineId };
+    const draft = loadDraft();
+    saveDraft({
+      ...draft,
+      customer: applyLineProfileToCustomer(
+        draft.customer ?? { name: "", phone: "", email: "" },
+        profile
+      )
     });
   }, [profile]);
 
@@ -120,7 +106,7 @@ export default function CustomerInfoPage() {
       const baseCustomer = {
         name: form.name.trim(),
         phone: form.phone.trim(),
-        lineId: activeProfile?.userId ? activeProfile.displayName : form.lineId.trim(),
+        lineId: form.lineId.trim(),
         email: form.email.trim(),
         allowSocialShare: form.allowSocialShare,
         instagramUsername:
@@ -173,10 +159,7 @@ export default function CustomerInfoPage() {
               label={t.customerInfo.lineId}
               value={form.lineId}
               error={errors.lineId}
-              onChange={(lineId) => {
-                lineIdTouchedRef.current = true;
-                setForm({ ...form, lineId });
-              }}
+              onChange={(lineId) => setForm({ ...form, lineId })}
             />
             <TextField
               id="customer-email"

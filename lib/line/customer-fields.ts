@@ -18,7 +18,7 @@ export function resolveLineProfile(
   return null;
 }
 
-/** Merge LIFF profile into the customer draft. LIFF fields override manual LINE ID for push. */
+/** Merge LIFF profile into the customer draft. Keeps manual lineId; LIFF userId is for push only. */
 export function applyLineProfileToCustomer(
   customer: CustomerDraft,
   profile: LineProfile | null | undefined
@@ -35,8 +35,7 @@ export function applyLineProfileToCustomer(
     lineUserId: profile.userId,
     lineDisplayName: profile.displayName,
     linePictureUrl: profile.pictureUrl ?? null,
-    lineConnected: true,
-    lineId: profile.displayName
+    lineConnected: true
   };
 }
 
@@ -51,7 +50,7 @@ export function buildLineSubmitPayload(customer: CustomerDraft) {
 
 export function customerLineLabel(customer?: Customer | CustomerDraft | null): string | undefined {
   if (!customer) return undefined;
-  return customer.lineDisplayName?.trim() || customer.lineId?.trim() || undefined;
+  return customer.lineId?.trim() || customer.lineDisplayName?.trim() || undefined;
 }
 
 export function customerLineDbFields(customer: CustomerDraft) {
@@ -59,7 +58,7 @@ export function customerLineDbFields(customer: CustomerDraft) {
 
   if (lineUserId) {
     return {
-      line_id: customer.lineDisplayName?.trim() || lineUserId,
+      line_id: customer.lineId?.trim() || "-",
       line_user_id: lineUserId,
       line_display_name: customer.lineDisplayName?.trim() || null,
       line_picture_url: customer.linePictureUrl?.trim() || null,

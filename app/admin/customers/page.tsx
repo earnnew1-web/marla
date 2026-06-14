@@ -85,7 +85,7 @@ export default function AdminCustomersPage() {
                     <TableCell>{customer.phone}</TableCell>
                     <TableCell>
                       {customer.lineConnected
-                        ? customer.lineDisplayName || customer.lineId || "Connected"
+                        ? customer.lineId || customer.lineDisplayName || "Connected"
                         : customer.lineId || "—"}
                     </TableCell>
                     <TableCell>{customer.email || "—"}</TableCell>

@@ -96,7 +96,8 @@ export async function createOrderInDb(draft: DraftOrder): Promise<Order> {
     orderCode,
     totalPrice: payload.order.total_price,
     customerPhone: payload.customer.phone,
-    lineUserId: payload.customer.line_user_id
+    lineUserId: payload.customer.line_user_id,
+    orderStatus: payload.order.status
   });
 
   return order;

@@ -97,10 +97,19 @@ export function buildOrderStatusFlex(order: FlexOrderInput) {
           },
           {
             type: "text" as const,
+            text: copy.title,
+            weight: "bold" as const,
+            size: "lg" as const,
+            color: BRAND.ink,
+            margin: "sm" as const,
+            wrap: true
+          },
+          {
+            type: "text" as const,
             text: copy.statusLabel,
             weight: "bold" as const,
-            size: "xl" as const,
-            color: BRAND.ink,
+            size: "md" as const,
+            color: BRAND.accent,
             margin: "sm" as const,
             wrap: true
           },

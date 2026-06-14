@@ -2,7 +2,7 @@ import { normalizeStatusValue } from "@/lib/admin/status-styles";
 import { sendLinePushMessage } from "@/lib/line/client";
 import { buildOrderStatusFlex } from "@/lib/line/flexMessages";
 import { hasLineMessagingConfigured } from "@/lib/line/env";
-import { orderStatusToLineKey, parseLineStatusInput, type LineStatusKey } from "@/lib/line/status";
+import { orderStatusToLineKey, parseLineStatusInput, resolveSubmitLineStatusKey, type LineStatusKey } from "@/lib/line/status";
 import { TABLES } from "@/lib/config/tables";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import type { OrderStatus } from "@/lib/types";
@@ -185,13 +185,14 @@ type OrderReceivedContext = {
   totalPrice: number;
   customerPhone: string;
   lineUserId: string | null | undefined;
+  orderStatus: OrderStatus;
 };
 
 export async function sendLineOrderReceivedMessage(orderId: string) {
-  return sendLineStatusMessage(orderId, "order_received");
+  return sendLineStatusNotificationForOrder(orderId);
 }
 
-/** Send order_received using data already written to the DB (avoids serverless fire-and-forget drops). */
+/** Send submit confirmation Flex using data already written to the DB. */
 export async function sendLineOrderReceivedFromContext(context: OrderReceivedContext): Promise<LineSendResult> {
   if (!hasLineMessagingConfigured()) {
     logLineSkip("LINE messaging is not configured", { orderId: context.orderId });
@@ -212,25 +213,28 @@ export async function sendLineOrderReceivedFromContext(context: OrderReceivedCon
     return successResult({ sent: false, linked: false, reason: "No LINE user linked" });
   }
 
+  const statusKey = resolveSubmitLineStatusKey(context.orderStatus);
+
   try {
     const flexMessage = buildOrderStatusFlex({
       orderCode: context.orderCode,
       totalPrice: context.totalPrice,
       customerPhone: context.customerPhone,
-      statusKey: "order_received"
+      statusKey
     });
 
     await sendLinePushMessage(lineUserId, flexMessage);
-    console.info("[LINE] order_received sent", {
+    console.info("[LINE] order submit notification sent", {
       orderId: context.orderId,
-      orderCode: context.orderCode
+      orderCode: context.orderCode,
+      status: statusKey
     });
     return successResult({ sent: true, linked: true });
   } catch (error) {
     logLineFailure(error, {
       orderId: context.orderId,
       orderCode: context.orderCode,
-      status: "order_received"
+      status: statusKey
     });
     return {
       success: false,
