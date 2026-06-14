@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { money } from "@/lib/format";
 import { formatPushPullLabel, getRollBrandLabel, getRollStockLabel } from "@/lib/film-roll";
+import { customerLineLabel } from "@/lib/line/customer-fields";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { priceRoll, priceTotal } from "@/lib/pricing";
 import { sectionTitle, sectionTitleLarge } from "@/lib/typography";
@@ -23,7 +24,7 @@ export function OrderSummary({ draft, order }: Props) {
   const filmTotal = rolls.reduce((sum, roll) => sum + priceRoll(roll), 0);
   const shipping = wantsDelivery ? 60 : 0;
   const total = order?.totalPrice ?? priceTotal(rolls, wantsDelivery);
-  const lineLabel = customer?.lineConnected ? customer.lineDisplayName ?? undefined : undefined;
+  const lineLabel = customerLineLabel(customer);
 
   return (
     <div className="space-y-4">

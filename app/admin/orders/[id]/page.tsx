@@ -151,11 +151,11 @@ export default function AdminOrderDetailPage() {
                 <Info label="Full name" value={order.customer.name} />
                 <Info label="Phone number" value={order.customer.phone} />
                 <Info
-                  label="LINE"
+                  label="LINE ID"
                   value={
                     order.customer.lineConnected
                       ? order.customer.lineDisplayName || order.customer.lineId || "Connected"
-                      : "Not connected"
+                      : order.customer.lineId || "—"
                   }
                 />
                 <Info label="Email" value={order.customer.email || "—"} />

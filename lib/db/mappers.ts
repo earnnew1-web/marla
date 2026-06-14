@@ -13,6 +13,7 @@ import type {
   AdminCustomerRow,
   AdminDashboardStats,
   Customer,
+  CustomerDraft,
   DeliveryInfo,
   DraftOrder,
   Order,
@@ -21,6 +22,7 @@ import type {
   PaymentStatus,
   PricingSettings
 } from "@/lib/types";
+import { customerLineDbFields } from "@/lib/line/customer-fields";
 
 export function normalizeStatus(status: OrderStatus | string): OrderStatus {
   return normalizeStatusValue(status);
@@ -157,7 +159,7 @@ export function mapOrder(row: DbOrderRow): Order {
     id: customerRow.id,
     name: customerRow.name,
     phone: customerRow.phone,
-    lineId: customerRow.line_display_name ?? customerRow.line_id ?? "",
+    lineId: customerRow.line_id ?? "",
     email: customerRow.email ?? "",
     allowSocialShare: customerRow.allow_social_share ?? false,
     instagramUsername: customerRow.instagram_username ?? null,
@@ -237,7 +239,7 @@ export function mapSubmittedOrder(
       id: ids.customerId,
       name: draft.customer.name,
       phone: draft.customer.phone,
-      lineId: draft.customer.lineDisplayName ?? draft.customer.lineUserId ?? "",
+      lineId: customerLineDbFields(draft.customer).line_id,
       email: draft.customer.email ?? "",
       allowSocialShare: draft.customer.allowSocialShare ?? false,
       instagramUsername: draft.customer.instagramUsername ?? null,
@@ -368,21 +370,23 @@ export function draftToDbPayload(draft: DraftOrder) {
   const initialStatus: OrderStatus =
     draft.payment.method === "cash" ? "Pending Payment Confirmation" : "Received";
 
+  const lineFields = customerLineDbFields(draft.customer);
+
   return {
     customer: {
       name: draft.customer.name.trim(),
       phone: draft.customer.phone.trim(),
-      line_id: draft.customer.lineDisplayName?.trim() || "-",
+      line_id: lineFields.line_id,
       email: draft.customer.email?.trim() || null,
       allow_social_share: draft.customer.allowSocialShare ?? false,
       instagram_username:
         draft.customer.allowSocialShare && draft.customer.instagramUsername?.trim()
           ? draft.customer.instagramUsername.trim()
           : null,
-      line_user_id: draft.customer.lineUserId?.trim() || null,
-      line_display_name: draft.customer.lineDisplayName?.trim() || null,
-      line_picture_url: draft.customer.linePictureUrl?.trim() || null,
-      line_connected: draft.customer.lineConnected ?? Boolean(draft.customer.lineUserId?.trim())
+      line_user_id: lineFields.line_user_id,
+      line_display_name: lineFields.line_display_name,
+      line_picture_url: lineFields.line_picture_url,
+      line_connected: lineFields.line_connected
     },
     order: {
       status: initialStatus,

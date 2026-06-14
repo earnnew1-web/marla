@@ -4,6 +4,7 @@ import { emptyRoll, normalizeRolls } from "@/lib/film-roll";
 import { mockOrders } from "@/lib/mock-data";
 import { formatOrderCode, nextOrderCodeSequence } from "@/lib/order-code";
 import { defaultPricing, priceRoll, priceTotal } from "@/lib/pricing";
+import { customerLineLabel } from "@/lib/line/customer-fields";
 import type { DraftOrder, Order, OrderStatus, PricingSettings } from "@/lib/types";
 
 const draftKey = "mfl:draft-order";
@@ -76,7 +77,7 @@ export function submitDraftOrder(draft: DraftOrder): Order {
     customer: {
       id: crypto.randomUUID(),
       ...draft.customer,
-      lineId: draft.customer.lineDisplayName ?? "",
+      lineId: customerLineLabel(draft.customer) ?? "",
       createdAt: new Date().toISOString()
     },
     rolls,

@@ -72,7 +72,7 @@ export default function AdminCustomersPage() {
                 <TableRow>
                   <TableHead>Customer Name</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>LINE</TableHead>
+                  <TableHead>LINE ID</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Total Orders</TableHead>
                   <TableHead>Last Order</TableHead>
@@ -86,7 +86,7 @@ export default function AdminCustomersPage() {
                     <TableCell>
                       {customer.lineConnected
                         ? customer.lineDisplayName || customer.lineId || "Connected"
-                        : "—"}
+                        : customer.lineId || "—"}
                     </TableCell>
                     <TableCell>{customer.email || "—"}</TableCell>
                     <TableCell>{customer.orderCount}</TableCell>

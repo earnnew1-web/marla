@@ -48,6 +48,7 @@ export type CustomerDraft = {
   name: string;
   phone: string;
   email: string;
+  lineId?: string;
   allowSocialShare?: boolean;
   instagramUsername?: string | null;
   lineUserId?: string | null;

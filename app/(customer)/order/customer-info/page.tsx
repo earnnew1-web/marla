@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { useLiff } from "@/components/line/LiffProvider";
 import { DEFAULT_FILM_DELIVERY_METHOD } from "@/lib/film-delivery";
+import { mergeCustomerLineProfile } from "@/lib/line/customer-fields";
 import { pageTitle, stepEyebrow } from "@/lib/typography";
 import { loadDraft, saveDraft } from "@/lib/storage";
 import type { FilmDeliveryMethod } from "@/lib/types";
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 type CustomerForm = {
   name: string;
   phone: string;
+  lineId: string;
   email: string;
   allowSocialShare: boolean;
   instagramUsername: string;
@@ -30,6 +32,7 @@ type CustomerForm = {
 const emptyForm = (): CustomerForm => ({
   name: "",
   phone: "",
+  lineId: "",
   email: "",
   allowSocialShare: false,
   instagramUsername: ""
@@ -38,12 +41,13 @@ const emptyForm = (): CustomerForm => ({
 export default function CustomerInfoPage() {
   const router = useRouter();
   const { t } = useCustomerLanguage();
-  const { profile } = useLiff();
+  const { ready, inLine, profile } = useLiff();
   const [form, setForm] = useState<CustomerForm>(emptyForm);
   const [filmDeliveryMethod, setFilmDeliveryMethod] = useState<FilmDeliveryMethod>(DEFAULT_FILM_DELIVERY_METHOD);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const lineConnected = Boolean(profile?.userId);
+  const showManualLineId = ready && !lineConnected;
 
   useEffect(() => {
     const draft = loadDraft();
@@ -53,6 +57,7 @@ export default function CustomerInfoPage() {
     setForm({
       name: draft.customer.name,
       phone: draft.customer.phone,
+      lineId: draft.customer.lineId ?? "",
       email: draft.customer.email ?? "",
       allowSocialShare: draft.customer.allowSocialShare ?? false,
       instagramUsername: draft.customer.instagramUsername ?? ""
@@ -64,6 +69,7 @@ export default function CustomerInfoPage() {
     const nextErrors: Record<string, string> = {};
     if (!form.name.trim()) nextErrors.name = t.customerInfo.errors.name;
     if (!form.phone.trim()) nextErrors.phone = t.customerInfo.errors.phone;
+    if (!lineConnected && !form.lineId.trim()) nextErrors.lineId = t.customerInfo.errors.lineId;
     if (!form.email.trim()) nextErrors.email = t.customerInfo.errors.email;
     if (form.allowSocialShare && !form.instagramUsername.trim()) {
       nextErrors.instagram = t.customerInfo.errors.instagram;
@@ -78,21 +84,20 @@ export default function CustomerInfoPage() {
     }
 
     const draft = loadDraft();
+    const baseCustomer = {
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim(),
+      allowSocialShare: form.allowSocialShare,
+      instagramUsername:
+        form.allowSocialShare && form.instagramUsername.trim() ? form.instagramUsername.trim() : null,
+      lineId: lineConnected ? undefined : form.lineId.trim()
+    };
+
     saveDraft({
       ...draft,
       filmDeliveryMethod,
-      customer: {
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-        allowSocialShare: form.allowSocialShare,
-        instagramUsername:
-          form.allowSocialShare && form.instagramUsername.trim() ? form.instagramUsername.trim() : null,
-        lineUserId: profile?.userId ?? null,
-        lineDisplayName: profile?.displayName ?? null,
-        linePictureUrl: profile?.pictureUrl ?? null,
-        lineConnected
-      }
+      customer: mergeCustomerLineProfile(baseCustomer, profile)
     });
     router.push("/order/film-rolls");
   };
@@ -122,6 +127,27 @@ export default function CustomerInfoPage() {
               error={errors.phone}
               onChange={(phone) => setForm({ ...form, phone })}
             />
+
+            {lineConnected && profile ? (
+              <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-sm font-semibold text-emerald-800">
+                {t.customerInfo.lineConnected.replace("{name}", profile.displayName)}
+              </p>
+            ) : null}
+
+            {showManualLineId ? (
+              <TextField
+                id="customer-line-id"
+                label={t.customerInfo.lineId}
+                value={form.lineId}
+                error={errors.lineId}
+                onChange={(lineId) => setForm({ ...form, lineId })}
+              />
+            ) : null}
+
+            {!ready && inLine ? (
+              <p className="text-sm text-muted-foreground">{t.customerInfo.lineConnecting}</p>
+            ) : null}
+
             <TextField
               id="customer-email"
               label={t.customerInfo.email}
@@ -131,12 +157,6 @@ export default function CustomerInfoPage() {
               type="email"
               placeholder={t.customerInfo.emailPlaceholder}
             />
-
-            {lineConnected && profile ? (
-              <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-sm font-semibold text-emerald-800">
-                {t.customerInfo.lineConnected.replace("{name}", profile.displayName)}
-              </p>
-            ) : null}
 
             <FilmDeliveryMethodSection
               filmDeliveryMethod={filmDeliveryMethod}
