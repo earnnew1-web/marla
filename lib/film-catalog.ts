@@ -38,8 +38,6 @@ export const FILM_STOCKS_BY_BRAND: Record<Exclude<FilmBrand, "Other">, readonly 
     "400",
     "Superia X-Tra 400",
     "Fujicolor 100",
-    "Velvia 50",
-    "Provia 100F",
     "Acros II",
     "Other"
   ],
