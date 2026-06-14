@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
 import { FilmDeliveryMethodSection } from "@/components/customer/FilmDeliveryMethodSection";
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { refreshLineProfile, useLiff, type LineProfile } from "@/components/line/LiffProvider";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { DEFAULT_FILM_DELIVERY_METHOD } from "@/lib/film-delivery";
-import { mergeCustomerLineProfile, resolveActiveLineProfile } from "@/lib/line/customer-fields";
+import { finalizeCustomerLineFields, mergeCustomerLineProfile, resolveActiveLineProfile } from "@/lib/line/customer-fields";
 import { pageTitle, stepEyebrow } from "@/lib/typography";
 import { loadDraft, saveDraft } from "@/lib/storage";
 import type { FilmDeliveryMethod } from "@/lib/types";
@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 type CustomerForm = {
   name: string;
   phone: string;
+  lineId: string;
   email: string;
   allowSocialShare: boolean;
   instagramUsername: string;
@@ -31,6 +32,7 @@ type CustomerForm = {
 const emptyForm = (): CustomerForm => ({
   name: "",
   phone: "",
+  lineId: "",
   email: "",
   allowSocialShare: false,
   instagramUsername: ""
@@ -39,15 +41,13 @@ const emptyForm = (): CustomerForm => ({
 export default function CustomerInfoPage() {
   const router = useRouter();
   const { t } = useCustomerLanguage();
-  const { ready, inLine, profile, initError } = useLiff();
+  const { inLine, profile } = useLiff();
   const [form, setForm] = useState<CustomerForm>(emptyForm);
   const [lineProfile, setLineProfile] = useState<LineProfile | null>(null);
   const [filmDeliveryMethod, setFilmDeliveryMethod] = useState<FilmDeliveryMethod>(DEFAULT_FILM_DELIVERY_METHOD);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-
-  const activeProfile = resolveActiveLineProfile(profile ?? lineProfile);
-  const lineConnected = Boolean(activeProfile?.userId);
+  const lineIdTouchedRef = useRef(false);
 
   useEffect(() => {
     const draft = loadDraft();
@@ -57,6 +57,7 @@ export default function CustomerInfoPage() {
     setForm({
       name: draft.customer.name,
       phone: draft.customer.phone,
+      lineId: draft.customer.lineId ?? draft.customer.lineDisplayName ?? "",
       email: draft.customer.email ?? "",
       allowSocialShare: draft.customer.allowSocialShare ?? false,
       instagramUsername: draft.customer.instagramUsername ?? ""
@@ -70,13 +71,28 @@ export default function CustomerInfoPage() {
     if (!profile?.userId) return;
     setLineProfile(profile);
 
-    const draft = loadDraft();
-    saveDraft({
-      ...draft,
-      customer: mergeCustomerLineProfile(
-        draft.customer ?? { name: "", phone: "", email: "" },
-        profile
-      )
+    setForm((current) => {
+      const nextLineId = lineIdTouchedRef.current
+        ? current.lineId
+        : current.lineId.trim() || profile.displayName;
+
+      const draft = loadDraft();
+      saveDraft({
+        ...draft,
+        customer: finalizeCustomerLineFields(
+          {
+            ...(draft.customer ?? {
+              name: current.name,
+              phone: current.phone,
+              email: current.email
+            }),
+            lineId: nextLineId
+          },
+          profile
+        )
+      });
+
+      return current.lineId === nextLineId ? current : { ...current, lineId: nextLineId };
     });
   }, [profile]);
 
@@ -85,6 +101,7 @@ export default function CustomerInfoPage() {
     const nextErrors: Record<string, string> = {};
     if (!form.name.trim()) nextErrors.name = t.customerInfo.errors.name;
     if (!form.phone.trim()) nextErrors.phone = t.customerInfo.errors.phone;
+    if (!form.lineId.trim()) nextErrors.lineId = t.customerInfo.errors.lineId;
     if (!form.email.trim()) nextErrors.email = t.customerInfo.errors.email;
     if (form.allowSocialShare && !form.instagramUsername.trim()) {
       nextErrors.instagram = t.customerInfo.errors.instagram;
@@ -110,6 +127,7 @@ export default function CustomerInfoPage() {
       const baseCustomer = {
         name: form.name.trim(),
         phone: form.phone.trim(),
+        lineId: form.lineId.trim(),
         email: form.email.trim(),
         allowSocialShare: form.allowSocialShare,
         instagramUsername:
@@ -119,7 +137,10 @@ export default function CustomerInfoPage() {
       saveDraft({
         ...draft,
         filmDeliveryMethod,
-        customer: mergeCustomerLineProfile(baseCustomer, latestProfile)
+        customer: finalizeCustomerLineFields(
+          mergeCustomerLineProfile(baseCustomer, latestProfile),
+          latestProfile
+        )
       });
       router.push("/order/film-rolls");
     } finally {
@@ -138,24 +159,6 @@ export default function CustomerInfoPage() {
               <p className="mt-2 font-normal text-muted-foreground">{t.customerInfo.subtitle}</p>
             </CardHeader>
             <CardContent className="space-y-4 p-5 pt-0 sm:px-7 sm:pb-7">
-            <div className="rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 px-3 py-2.5 text-xs font-mono text-amber-950">
-              <p>LINE connected: {lineConnected ? "true" : "false"}</p>
-              <p>LINE userId exists: {activeProfile?.userId ? "true" : "false"}</p>
-              <p>LIFF ready: {ready ? "true" : "false"}</p>
-              <p>in LINE app: {inLine ? "true" : "false"}</p>
-              {initError ? <p className="mt-1 text-destructive">LIFF error: {initError}</p> : null}
-            </div>
-
-            {lineConnected && activeProfile ? (
-              <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-sm font-semibold text-emerald-800">
-                {t.customerInfo.lineConnected.replace("{name}", activeProfile.displayName)}
-              </p>
-            ) : null}
-
-            {!ready && inLine ? (
-              <p className="text-sm text-muted-foreground">{t.customerInfo.lineConnecting}</p>
-            ) : null}
-
             <TextField
               id="customer-name"
               label={t.customerInfo.fullName}
@@ -169,6 +172,16 @@ export default function CustomerInfoPage() {
               value={form.phone}
               error={errors.phone}
               onChange={(phone) => setForm({ ...form, phone })}
+            />
+            <TextField
+              id="customer-line-id"
+              label={t.customerInfo.lineId}
+              value={form.lineId}
+              error={errors.lineId}
+              onChange={(lineId) => {
+                lineIdTouchedRef.current = true;
+                setForm({ ...form, lineId });
+              }}
             />
             <TextField
               id="customer-email"
@@ -268,7 +281,6 @@ function TextField({
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={!!error}
-        disabled={false}
       />
       {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
     </div>
