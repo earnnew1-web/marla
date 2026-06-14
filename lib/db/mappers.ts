@@ -209,6 +209,58 @@ export function mapOrder(row: DbOrderRow): Order {
   };
 }
 
+/** Lightweight order for submit response — omits payment slip image data. */
+export function mapSubmittedOrder(
+  draft: DraftOrder,
+  ids: { orderId: string; customerId: string; orderCode: string },
+  payload: ReturnType<typeof draftToDbPayload>
+): Order {
+  if (!draft.customer || !draft.delivery || !draft.payment) {
+    throw new Error("Order is missing required information.");
+  }
+
+  const createdAt = nowIso();
+  const pricedRolls = draft.rolls.map((roll) => ({ ...roll, price: priceRoll(roll) }));
+
+  return {
+    id: ids.orderId,
+    orderCode: ids.orderCode,
+    customer: {
+      id: ids.customerId,
+      name: draft.customer.name,
+      phone: draft.customer.phone,
+      lineId: draft.customer.lineId,
+      email: draft.customer.email ?? "",
+      allowSocialShare: draft.customer.allowSocialShare ?? false,
+      instagramUsername: draft.customer.instagramUsername ?? null,
+      createdAt
+    },
+    rolls: pricedRolls,
+    delivery: draft.delivery,
+    payment: {
+      method: draft.payment.method,
+      status: "pending_payment_confirmation",
+      paymentSlipFileName: draft.payment.paymentSlipFileName,
+      bankName: payload.payment.bank_name,
+      accountNumber: payload.payment.account_number,
+      accountName: payload.payment.account_name,
+      amount: payload.payment.amount
+    },
+    status: payload.order.status as OrderStatus,
+    totalPrice: payload.order.total_price,
+    filmTotal: payload.order.film_total,
+    shippingFee: payload.order.shipping_fee,
+    discountAmount: payload.order.discount_amount,
+    createdAt,
+    filmDeliveryMethod: draft.filmDeliveryMethod ?? "drop_off",
+    returnMethod: payload.order.return_method as Order["returnMethod"]
+  };
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
 export function buildDashboardStats(orders: Order[]): AdminDashboardStats {
   const today = new Date().toDateString();
 
@@ -318,7 +370,7 @@ export function draftToDbPayload(draft: DraftOrder) {
       status: initialStatus,
       payment_status: "pending_payment_confirmation" as PaymentStatus,
       payment_method: draft.payment.method,
-      payment_slip_url: draft.payment.paymentSlipDataUrl ?? null,
+      payment_slip_url: null,
       payment_slip_file_name: draft.payment.paymentSlipFileName ?? null,
       film_delivery_method: draft.filmDeliveryMethod ?? "drop_off",
       return_method: returnMethod,

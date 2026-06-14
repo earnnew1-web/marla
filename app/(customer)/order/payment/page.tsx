@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CashPaymentBlockedDialog } from "@/components/customer/CashPaymentBlockedDialog";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
@@ -196,6 +197,21 @@ export default function PaymentPage() {
         onOpenChange={setCashBlockedOpen}
         onSwitchToBankTransfer={() => setPaymentMethod("bank_transfer")}
       />
+
+      {submitting ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 px-4 backdrop-blur-sm"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-border/70 bg-card px-6 py-8 text-center shadow-lg">
+            <Loader2 className="h-9 w-9 animate-spin text-accent" />
+            <p className="text-base font-bold">{t.payment.submitting}</p>
+            <p className="text-sm text-muted-foreground">{t.payment.submittingDetail}</p>
+          </div>
+        </div>
+      ) : null}
     </CustomerLayout>
   );
 }

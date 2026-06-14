@@ -2,6 +2,7 @@
 
 import { emptyRoll, normalizeRolls } from "@/lib/film-roll";
 import { mockOrders } from "@/lib/mock-data";
+import { formatOrderCode, nextOrderCodeSequence } from "@/lib/order-code";
 import { defaultPricing, priceRoll, priceTotal } from "@/lib/pricing";
 import type { DraftOrder, Order, OrderStatus, PricingSettings } from "@/lib/types";
 
@@ -62,10 +63,7 @@ export function submitDraftOrder(draft: DraftOrder): Order {
   }
 
   const orders = loadOrders();
-  const nextNumber = orders.reduce((max, order) => {
-    const number = Number(order.orderCode.replace("MFL-", ""));
-    return Number.isFinite(number) ? Math.max(max, number) : max;
-  }, 1025) + 1;
+  const nextNumber = nextOrderCodeSequence(orders.map((order) => order.orderCode));
   const pricing = loadPricing();
   const rolls = draft.rolls.map((roll) => ({ ...roll, price: priceRoll(roll, pricing) }));
   const wantsDelivery = draft.delivery.filmReturn === "Delivery (+60 THB)";
@@ -74,7 +72,7 @@ export function submitDraftOrder(draft: DraftOrder): Order {
 
   const order: Order = {
     id: crypto.randomUUID(),
-    orderCode: `MFL-${nextNumber}`,
+    orderCode: formatOrderCode(nextNumber),
     customer: {
       id: crypto.randomUUID(),
       ...draft.customer,

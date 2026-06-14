@@ -64,7 +64,7 @@ roll3.price = priceRoll(roll3);
 export const mockOrders: Order[] = [
   {
     id: "ord_1024",
-    orderCode: "MFL-1024",
+    orderCode: "ML-000001",
     customer: {
       id: "cus_1",
       name: "Anya Pradit",
@@ -87,7 +87,7 @@ export const mockOrders: Order[] = [
   },
   {
     id: "ord_1025",
-    orderCode: "MFL-1025",
+    orderCode: "ML-000002",
     customer: {
       id: "cus_2",
       name: "Mika Tan",

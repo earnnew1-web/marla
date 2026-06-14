@@ -1,4 +1,5 @@
 import { TABLES } from "@/lib/config/tables";
+import { formatOrderCode, nextOrderCodeSequence } from "@/lib/order-code";
 import { defaultPricing } from "@/lib/pricing";
 import { formatSupabaseError } from "@/lib/supabase/errors";
 import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
@@ -9,6 +10,7 @@ import {
   draftToDbPayload,
   getOrderSelect,
   mapOrder,
+  mapSubmittedOrder,
   mapPricing,
   pricingToDb,
   type DbOrderRow
@@ -22,19 +24,14 @@ async function generateOrderCode(supabase: ReturnType<typeof createAdminSupabase
   const { data, error } = await supabase
     .from(TABLES.orders)
     .select("order_code")
-    .order("created_at", { ascending: false })
-    .limit(1);
+    .like("order_code", "ML-%")
+    .order("order_code", { ascending: false })
+    .limit(50);
 
   if (error) throw error;
 
-  let next = 1026;
-  const latest = data?.[0]?.order_code;
-  if (latest) {
-    const number = Number(String(latest).replace("MFL-", ""));
-    if (Number.isFinite(number)) next = number + 1;
-  }
-
-  return `MFL-${next}`;
+  const next = nextOrderCodeSequence((data ?? []).map((row) => row.order_code));
+  return formatOrderCode(next);
 }
 
 export async function createOrderInDb(draft: DraftOrder): Promise<Order> {
@@ -71,25 +68,27 @@ export async function createOrderInDb(draft: DraftOrder): Promise<Order> {
     order_id: orderRow.id
   }));
 
-  const { error: rollsError } = await supabase.from(TABLES.filmRolls).insert(rollsPayload);
-  if (rollsError) {
-    throw new Error(formatSupabaseError(rollsError));
+  const [rollsResult, paymentResult] = await Promise.all([
+    supabase.from(TABLES.filmRolls).insert(rollsPayload),
+    supabase.from(TABLES.payments).insert({
+      ...payload.payment,
+      order_id: orderRow.id
+    })
+  ]);
+
+  if (rollsResult.error) {
+    throw new Error(formatSupabaseError(rollsResult.error));
   }
 
-  const { error: paymentError } = await supabase.from(TABLES.payments).insert({
-    ...payload.payment,
-    order_id: orderRow.id
-  });
-
-  if (paymentError) {
-    throw new Error(formatSupabaseError(paymentError));
+  if (paymentResult.error) {
+    throw new Error(formatSupabaseError(paymentResult.error));
   }
 
-  const order = await fetchOrderByIdForAdmin(orderRow.id);
-  if (!order) {
-    throw new Error("Order created but could not be loaded");
-  }
-  return order;
+  return mapSubmittedOrder(
+    draft,
+    { orderId: orderRow.id, customerId: customerRow.id, orderCode },
+    payload
+  );
 }
 
 async function queryOrders(supabase: ReturnType<typeof createServerSupabaseClient>) {

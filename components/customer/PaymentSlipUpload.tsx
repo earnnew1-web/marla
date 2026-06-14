@@ -1,7 +1,7 @@
 "use client";
 
-import { ImagePlus, X } from "lucide-react";
-import { useRef } from "react";
+import { ImagePlus, Loader2, X } from "lucide-react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   filmFlowCard,
@@ -11,6 +11,7 @@ import {
   filmFlowNestedInset
 } from "@/components/customer/filmFlowStyles";
 import { PAYMENT_SLIP_ACCEPT } from "@/lib/payment";
+import { compressPaymentSlipFile } from "@/lib/payment-slip";
 import { VALIDATION_MESSAGE } from "@/lib/film-roll-validation";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { cn } from "@/lib/utils";
@@ -34,18 +35,21 @@ export function PaymentSlipUpload({
 }: Props) {
   const { t } = useCustomerLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [processing, setProcessing] = useState(false);
 
-  const handleFile = (file: File | undefined) => {
-    if (!file) return;
+  const handleFile = async (file: File | undefined) => {
+    if (!file || processing) return;
     onInteract();
+    setProcessing(true);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        onUpload(reader.result, file.name);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const { dataUrl: compressed, fileName: nextFileName } = await compressPaymentSlipFile(file);
+      onUpload(compressed, nextFileName);
+    } catch {
+      onInteract();
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
@@ -59,13 +63,19 @@ export function PaymentSlipUpload({
           type="file"
           accept={PAYMENT_SLIP_ACCEPT}
           className="hidden"
+          disabled={processing}
           onChange={(event) => {
-            handleFile(event.target.files?.[0]);
+            void handleFile(event.target.files?.[0]);
             event.target.value = "";
           }}
         />
 
-        {dataUrl ? (
+        {processing ? (
+          <div className="flex min-h-36 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 py-6">
+            <Loader2 className="h-6 w-6 animate-spin text-accent" />
+            <span className="text-sm font-semibold text-muted-foreground">{t.payment.slipProcessing}</span>
+          </div>
+        ) : dataUrl ? (
           <div className={cn(filmFlowNestedInset, "space-y-3")}>
             <div className="relative overflow-hidden rounded-lg border border-border/60 bg-card">
               {/* eslint-disable-next-line @next/next/no-img-element */}

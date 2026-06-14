@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { cn } from "@/lib/utils";
@@ -44,10 +45,11 @@ export function OrderStepNavigation({
       ) : null}
       <Button
         type={continueType}
-        className={cn("h-11", showBack ? "w-full sm:ml-auto sm:w-auto sm:min-w-[9rem]" : "w-full")}
+        className={cn("h-11 gap-2", showBack ? "w-full sm:ml-auto sm:w-auto sm:min-w-[9rem]" : "w-full")}
         disabled={continueDisabled || continueLoading}
         onClick={continueType === "button" ? onContinue : undefined}
       >
+        {continueLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
         {continueLabel}
       </Button>
     </div>
