@@ -3,15 +3,18 @@ import type { NextRequest } from "next/server";
 
 export const ADMIN_AUTH_COOKIE = "mfl-admin-auth";
 
-const DEFAULT_ADMIN_BETA_PASSWORD = "admin123";
+const DEFAULT_ADMIN_PASSWORD = "admin123";
 
-export function getAdminBetaPassword() {
+export function getAdminPassword() {
   const configured = process.env.ADMIN_BETA_PASSWORD?.trim();
-  return configured || DEFAULT_ADMIN_BETA_PASSWORD;
+  return configured || DEFAULT_ADMIN_PASSWORD;
 }
 
+/** @deprecated Use getAdminPassword */
+export const getAdminBetaPassword = getAdminPassword;
+
 export function verifyAdminPassword(password: string) {
-  const expected = getAdminBetaPassword();
+  const expected = getAdminPassword();
   if (!expected) return false;
   return password === expected;
 }

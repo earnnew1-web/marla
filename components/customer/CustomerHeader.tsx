@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { LanguageSwitcher } from "@/components/customer/LanguageSwitcher";
-import { BetaBadge } from "@/components/BetaBadge";
 
 export function CustomerHeader() {
   return (
@@ -14,10 +13,7 @@ export function CustomerHeader() {
           className="h-auto w-[96px] object-contain sm:w-[128px] md:w-[148px]"
         />
       </Link>
-      <div className="flex items-center gap-3">
-        <BetaBadge />
-        <LanguageSwitcher />
-      </div>
+      <LanguageSwitcher />
     </header>
   );
 }

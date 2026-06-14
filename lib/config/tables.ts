@@ -8,18 +8,16 @@ export const TABLES = {
   filmRolls: isBeta ? "beta_film_rolls" : "film_rolls",
   adminUsers: isBeta ? "beta_admin_users" : "admin_users",
   payments: isBeta ? "beta_payments" : "payments",
-  /** No dedicated beta table — shared or falls back to defaults in app code. */
+  /** Shared table — same name in all environments. */
   pricingSettings: "pricing_settings"
 } as const;
 
 export type TableKey = keyof typeof TABLES;
 
 if (process.env.NODE_ENV === "development") {
-  if (isBeta) {
-    console.log("Using Beta Tables", TABLES);
-  } else if (isProductionEnv()) {
-    console.log("Using Production Tables", TABLES);
+  if (isProductionEnv()) {
+    console.log("Using production tables", TABLES);
   } else {
-    console.log("Using Production Tables (development default)", TABLES);
+    console.log("Using database tables", TABLES);
   }
 }

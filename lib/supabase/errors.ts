@@ -24,7 +24,7 @@ export function formatSupabaseError(error: unknown): string {
 
   if (/row-level security/i.test(message) && !hasServiceRoleKey()) {
     message +=
-      " Add SUPABASE_SERVICE_ROLE_KEY to .env.local (Supabase → Settings → API → service_role), save the file, restart the dev server, or run supabase/beta_rls_policies.sql.";
+      " Add SUPABASE_SERVICE_ROLE_KEY to .env.local (Supabase → Settings → API → service_role), save the file, and restart the dev server.";
   }
 
   return message;

@@ -160,7 +160,7 @@ export async function updateOrderStatusInDb(id: string, status: OrderStatus): Pr
   if (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "PGRST116") {
       throw new Error(
-        "Order status update blocked by database permissions (RLS). Configure Supabase RLS for beta tables, or set SUPABASE_SERVICE_ROLE_KEY."
+        "Order status update blocked by database permissions (RLS). Set SUPABASE_SERVICE_ROLE_KEY or configure Supabase RLS policies for order tables."
       );
     }
     throw new Error(formatSupabaseError(error));

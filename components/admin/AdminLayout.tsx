@@ -6,7 +6,6 @@ import { useState } from "react";
 import { BarChart3, ClipboardList, Menu, Settings, Users } from "lucide-react";
 import { AdminProtectedRoute } from "@/components/admin/AdminProtectedRoute";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { BetaBadge } from "@/components/BetaBadge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -36,10 +35,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         <div className="lg:ml-64">
           <header className="sticky top-0 z-30 border-b border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Marla Film Lab Admin</p>
-                <BetaBadge variant="admin" />
-              </div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Marla Film Lab Admin</p>
               <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="icon" aria-label="Open navigation menu">

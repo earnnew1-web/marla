@@ -12,7 +12,6 @@ import {
   Settings,
   Users
 } from "lucide-react";
-import { BetaBadge } from "@/components/BetaBadge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -39,11 +38,8 @@ export function AdminSidebar() {
       <div className="flex items-center justify-between border-b border-primary-foreground/10 px-4 py-5">
         {!collapsed ? (
           <div>
-            <div className="flex items-center gap-2">
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-accent">Internal</p>
-              <BetaBadge variant="admin" />
-            </div>
-            <h1 className="mt-1 text-lg font-bold leading-tight">Marla Film Lab Admin</h1>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-accent">Marla Film Lab</p>
+            <h1 className="mt-1 text-lg font-bold leading-tight">Admin</h1>
           </div>
         ) : (
           <div className="mx-auto grid h-10 w-10 place-items-center rounded-lg bg-accent/20 text-sm font-bold text-accent">
@@ -91,8 +87,8 @@ export function AdminSidebar() {
       <div className="px-4 py-4">
         {!collapsed ? (
           <div className="mb-3 rounded-lg bg-primary-foreground/5 px-3 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-foreground/50">Beta admin</p>
-            <p className="mt-1 text-sm font-semibold">Protected access</p>
+            <p className="text-sm font-semibold">Staff access</p>
+            <p className="mt-1 text-xs text-primary-foreground/60">Authorized team members only</p>
           </div>
         ) : null}
         <Button

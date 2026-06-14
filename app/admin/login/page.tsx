@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Camera } from "lucide-react";
-import { BetaBadge } from "@/components/BetaBadge";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -38,21 +37,18 @@ export default function AdminLoginPage() {
 
   return (
     <main className="admin-shell grid min-h-screen place-items-center px-4 py-10">
-      <form onSubmit={submit} className="admin-panel relative w-full max-w-md p-6">
-        <div className="absolute right-4 top-4">
-          <BetaBadge variant="admin" />
-        </div>
-        <div className="mb-6 flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-lg bg-ink text-paper">
+      <form onSubmit={submit} className="admin-panel w-full max-w-md p-6 sm:p-8">
+        <div className="mb-8 flex items-center gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink text-paper">
             <Camera size={20} />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-caramel">Internal access</p>
             <h1 className="text-2xl font-extrabold">Marla Film Lab Admin</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Sign in to manage orders</p>
           </div>
         </div>
         <label className="block">
-          <span className="label">Beta password</span>
+          <span className="label">Password</span>
           <input
             className="field"
             type="password"
@@ -63,7 +59,7 @@ export default function AdminLoginPage() {
         </label>
         {error ? <p className="mt-3 text-sm font-semibold text-rose">{error}</p> : null}
         <button className="primary-button mt-6 w-full" type="submit" disabled={loading}>
-          {loading ? "Signing in..." : "Login"}
+          {loading ? "Signing in..." : "Sign in"}
         </button>
       </form>
     </main>
