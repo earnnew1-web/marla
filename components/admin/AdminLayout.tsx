@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BarChart3, ClipboardList, Menu, Settings, Users } from "lucide-react";
 import { AdminProtectedRoute } from "@/components/admin/AdminProtectedRoute";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { unlockNotificationSound } from "@/lib/admin/notification-sound";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -27,6 +28,16 @@ const mobileLinks = [
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    const unlock = () => unlockNotificationSound();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   return (
     <AdminProtectedRoute>

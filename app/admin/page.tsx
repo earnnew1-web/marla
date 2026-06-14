@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminOrdersTable } from "@/components/admin/AdminOrdersTable";
 import { AdminStatusTabs } from "@/components/admin/AdminStatusTabs";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { filterOrders } from "@/lib/admin/filters";
 import { fetchAdminDashboard } from "@/lib/admin/api";
+import { useAdminOrdersRealtime } from "@/lib/admin/useAdminOrdersRealtime";
 import { buildDashboardStats } from "@/lib/db/mappers";
 import type { AdminStatusFilter } from "@/lib/options";
 import type { Order } from "@/lib/types";
@@ -33,22 +34,51 @@ export default function AdminDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = useMemo(() => filterOrders(orders, { query, status }), [orders, query, status]);
+  const handleNewOrder = useCallback(
+    (order: Order) => {
+      setOrders((current) => {
+        if (current.some((item) => item.id === order.id)) return current;
+        const nextOrders = [order, ...current];
+        setStats(buildDashboardStats(nextOrders));
+        return nextOrders;
+      });
+    },
+    []
+  );
 
-  const handleOrderUpdated = (updated: Order) => {
+  const handleOrderUpdated = useCallback((updated: Order) => {
     setOrders((current) => {
       const nextOrders = current.map((order) => (order.id === updated.id ? updated : order));
       setStats(buildDashboardStats(nextOrders));
       return nextOrders;
     });
-  };
+  }, []);
+
+  useAdminOrdersRealtime({
+    ready: !loading && !error,
+    orders,
+    onNewOrder: handleNewOrder,
+    onOrderUpdated: handleOrderUpdated
+  });
+
+  const filtered = useMemo(() => filterOrders(orders, { query, status }), [orders, query, status]);
 
   return (
     <AdminLayout>
       <div className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Operations</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Operations</p>
+          {!loading && !error ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" aria-hidden />
+              Live
+            </span>
+          ) : null}
+        </div>
         <h1 className="mt-2 text-3xl font-bold">Dashboard</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Live queue from Supabase.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Live queue from Supabase — new orders alert with sound.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -63,7 +93,7 @@ export default function AdminDashboardPage() {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <CardTitle className="text-xl">Order queue</CardTitle>
-              <CardDescription className="mt-1">Newest first</CardDescription>
+              <CardDescription className="mt-1">Newest first — updates automatically</CardDescription>
             </div>
             <Input
               className="max-w-md"
