@@ -1,4 +1,4 @@
-import { sendLineOrderReceivedMessage } from "@/lib/line/send-status";
+import { sendLineOrderReceivedFromContext } from "@/lib/line/send-status";
 import { TABLES } from "@/lib/config/tables";
 import { formatOrderCode, nextOrderCodeSequence } from "@/lib/order-code";
 import { defaultPricing } from "@/lib/pricing";
@@ -91,8 +91,12 @@ export async function createOrderInDb(draft: DraftOrder): Promise<Order> {
     payload
   );
 
-  void sendLineOrderReceivedMessage(orderRow.id).catch((error) => {
-    console.error("[createOrderInDb] LINE notification failed", error);
+  await sendLineOrderReceivedFromContext({
+    orderId: orderRow.id,
+    orderCode,
+    totalPrice: payload.order.total_price,
+    customerPhone: payload.customer.phone,
+    lineUserId: payload.customer.line_user_id
   });
 
   return order;
