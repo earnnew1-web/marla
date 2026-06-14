@@ -5,16 +5,17 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
 import { FilmDeliveryMethodSection } from "@/components/customer/FilmDeliveryMethodSection";
+import { LineDebugPanel } from "@/components/line/LineDebugPanel";
 import { OrderStepIndicator } from "@/components/customer/OrderStepIndicator";
 import { OrderStepNavigation } from "@/components/customer/OrderStepNavigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { refreshLineProfile, useLiff, type LineProfile } from "@/components/line/LiffProvider";
+import { getStoredLineProfile, refreshLineProfile, useLiff } from "@/components/line/LiffProvider";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { DEFAULT_FILM_DELIVERY_METHOD } from "@/lib/film-delivery";
-import { finalizeCustomerLineFields, mergeCustomerLineProfile, resolveActiveLineProfile } from "@/lib/line/customer-fields";
+import { applyLineProfileToCustomer, resolveLineProfile } from "@/lib/line/customer-fields";
 import { pageTitle, stepEyebrow } from "@/lib/typography";
 import { loadDraft, saveDraft } from "@/lib/storage";
 import type { FilmDeliveryMethod } from "@/lib/types";
@@ -43,7 +44,6 @@ export default function CustomerInfoPage() {
   const { t } = useCustomerLanguage();
   const { inLine, profile } = useLiff();
   const [form, setForm] = useState<CustomerForm>(emptyForm);
-  const [lineProfile, setLineProfile] = useState<LineProfile | null>(null);
   const [filmDeliveryMethod, setFilmDeliveryMethod] = useState<FilmDeliveryMethod>(DEFAULT_FILM_DELIVERY_METHOD);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -62,24 +62,18 @@ export default function CustomerInfoPage() {
       allowSocialShare: draft.customer.allowSocialShare ?? false,
       instagramUsername: draft.customer.instagramUsername ?? ""
     });
-
-    const draftProfile = resolveActiveLineProfile(null, draft.customer);
-    if (draftProfile) setLineProfile(draftProfile);
   }, []);
 
   useEffect(() => {
     if (!profile?.userId) return;
-    setLineProfile(profile);
 
     setForm((current) => {
-      const nextLineId = lineIdTouchedRef.current
-        ? current.lineId
-        : current.lineId.trim() || profile.displayName;
+      const nextLineId = lineIdTouchedRef.current ? current.lineId : profile.displayName;
 
       const draft = loadDraft();
       saveDraft({
         ...draft,
-        customer: finalizeCustomerLineFields(
+        customer: applyLineProfileToCustomer(
           {
             ...(draft.customer ?? {
               name: current.name,
@@ -117,30 +111,30 @@ export default function CustomerInfoPage() {
 
     setSubmitting(true);
     try {
-      let latestProfile = resolveActiveLineProfile(profile ?? lineProfile);
-      if (inLine && !latestProfile?.userId) {
-        latestProfile = await refreshLineProfile();
-        if (latestProfile) setLineProfile(latestProfile);
+      let activeProfile = resolveLineProfile(profile ?? getStoredLineProfile());
+      if (inLine && !activeProfile?.userId) {
+        activeProfile = await refreshLineProfile();
       }
 
       const draft = loadDraft();
       const baseCustomer = {
         name: form.name.trim(),
         phone: form.phone.trim(),
-        lineId: form.lineId.trim(),
+        lineId: activeProfile?.userId ? activeProfile.displayName : form.lineId.trim(),
         email: form.email.trim(),
         allowSocialShare: form.allowSocialShare,
         instagramUsername:
-          form.allowSocialShare && form.instagramUsername.trim() ? form.instagramUsername.trim() : null
+          form.allowSocialShare && form.instagramUsername.trim() ? form.instagramUsername.trim() : null,
+        lineUserId: draft.customer?.lineUserId,
+        lineDisplayName: draft.customer?.lineDisplayName,
+        linePictureUrl: draft.customer?.linePictureUrl,
+        lineConnected: draft.customer?.lineConnected
       };
 
       saveDraft({
         ...draft,
         filmDeliveryMethod,
-        customer: finalizeCustomerLineFields(
-          mergeCustomerLineProfile(baseCustomer, latestProfile),
-          latestProfile
-        )
+        customer: applyLineProfileToCustomer(baseCustomer, activeProfile)
       });
       router.push("/order/film-rolls");
     } finally {
@@ -159,6 +153,7 @@ export default function CustomerInfoPage() {
               <p className="mt-2 font-normal text-muted-foreground">{t.customerInfo.subtitle}</p>
             </CardHeader>
             <CardContent className="space-y-4 p-5 pt-0 sm:px-7 sm:pb-7">
+            <LineDebugPanel />
             <TextField
               id="customer-name"
               label={t.customerInfo.fullName}

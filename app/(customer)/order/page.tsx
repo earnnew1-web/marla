@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useLiff } from "@/components/line/LiffProvider";
+import { applyLineProfileToCustomer } from "@/lib/line/customer-fields";
+import { loadDraft, saveDraft } from "@/lib/storage";
 
 export default function OrderEntryPage() {
   const router = useRouter();
@@ -10,7 +12,20 @@ export default function OrderEntryPage() {
 
   useEffect(() => {
     if (!ready) return;
+
+    if (profile?.userId) {
+      const draft = loadDraft();
+      saveDraft({
+        ...draft,
+        customer: applyLineProfileToCustomer(
+          draft.customer ?? { name: "", phone: "", email: "" },
+          profile
+        )
+      });
+    }
+
     if (inLine && !profile?.userId) return;
+
     router.replace("/order/customer-info");
   }, [ready, inLine, profile?.userId, router]);
 

@@ -2,28 +2,29 @@
 
 import liff from "@line/liff";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { getLiffEndpointUrl, getLiffId } from "@/lib/line/env";
+import { getLiffEndpointUrl, getLiffId, hasLiffId } from "@/lib/line/env";
+import type { LineProfile } from "@/lib/line/profile";
+
+export type { LineProfile };
 
 const LINE_PROFILE_STORAGE_KEY = "mfl:line-profile";
 
-export type LineProfile = {
-  userId: string;
-  displayName: string;
-  pictureUrl?: string;
-};
+let liffInitPromise: Promise<void> | null = null;
 
 type LiffContextValue = {
   ready: boolean;
   inLine: boolean;
   profile: LineProfile | null;
   initError: string | null;
+  liffIdConfigured: boolean;
 };
 
 const LiffContext = createContext<LiffContextValue>({
   ready: true,
   inLine: false,
   profile: null,
-  initError: null
+  initError: null,
+  liffIdConfigured: false
 });
 
 function readStoredProfile(): LineProfile | null {
@@ -54,22 +55,47 @@ function mapProfile(nextProfile: { userId: string; displayName: string; pictureU
   };
 }
 
-export async function refreshLineProfile(): Promise<LineProfile | null> {
+export async function ensureLiffInit(): Promise<boolean> {
   const liffId = getLiffId();
-  if (!liffId || typeof window === "undefined") {
+  if (!liffId || typeof window === "undefined") return false;
+
+  if (!liffInitPromise) {
+    liffInitPromise = liff
+      .init({ liffId })
+      .then(() => {
+        console.log("[LIFF] initialized");
+        console.log("[LIFF] isInClient", liff.isInClient());
+      })
+      .catch((error) => {
+        liffInitPromise = null;
+        throw error;
+      });
+  }
+
+  await liffInitPromise;
+  return true;
+}
+
+async function fetchLiffProfile(): Promise<LineProfile | null> {
+  const initialized = await ensureLiffInit();
+  if (!initialized) return readStoredProfile();
+
+  if (!liff.isLoggedIn()) {
+    if (liff.isInClient()) {
+      liff.login({ redirectUri: getLiffEndpointUrl() });
+    }
     return readStoredProfile();
   }
 
+  const nextProfile = mapProfile(await liff.getProfile());
+  console.log("[LIFF] profile", nextProfile);
+  storeProfile(nextProfile);
+  return nextProfile;
+}
+
+export async function refreshLineProfile(): Promise<LineProfile | null> {
   try {
-    await liff.init({ liffId });
-
-    if (!liff.isLoggedIn()) {
-      return readStoredProfile();
-    }
-
-    const nextProfile = mapProfile(await liff.getProfile());
-    storeProfile(nextProfile);
-    return nextProfile;
+    return await fetchLiffProfile();
   } catch (error) {
     console.error("[LIFF] refreshLineProfile failed", error);
     return readStoredProfile();
@@ -81,43 +107,24 @@ export function LiffProvider({ children }: { children: React.ReactNode }) {
   const [inLine, setInLine] = useState(false);
   const [profile, setProfile] = useState<LineProfile | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+  const liffIdConfigured = hasLiffId();
 
   useEffect(() => {
-    const liffId = getLiffId();
     const stored = readStoredProfile();
     if (stored) setProfile(stored);
 
-    if (!liffId) {
+    if (!liffIdConfigured) {
       setReady(true);
       return;
     }
 
     let cancelled = false;
 
-    liff
-      .init({ liffId })
-      .then(async () => {
+    fetchLiffProfile()
+      .then((nextProfile) => {
         if (cancelled) return;
-
-        const isInClient = liff.isInClient();
-        setInLine(isInClient);
-        console.info("[LIFF] initialized", {
-          isInClient,
-          isLoggedIn: liff.isLoggedIn(),
-          endpoint: getLiffEndpointUrl()
-        });
-
-        if (!liff.isLoggedIn()) {
-          if (isInClient) {
-            liff.login({ redirectUri: getLiffEndpointUrl() });
-          }
-          return;
-        }
-
-        const nextProfile = mapProfile(await liff.getProfile());
-        setProfile(nextProfile);
-        storeProfile(nextProfile);
-        console.info("[LIFF] profile loaded", { userId: nextProfile.userId });
+        setInLine(liff.isInClient());
+        if (nextProfile) setProfile(nextProfile);
       })
       .catch((error) => {
         console.error("[LIFF] init failed", error);
@@ -132,16 +139,17 @@ export function LiffProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [liffIdConfigured]);
 
   const value = useMemo(
     () => ({
       ready,
       inLine,
       profile,
-      initError
+      initError,
+      liffIdConfigured
     }),
-    [ready, inLine, profile, initError]
+    [ready, inLine, profile, initError, liffIdConfigured]
   );
 
   return <LiffContext.Provider value={value}>{children}</LiffContext.Provider>;

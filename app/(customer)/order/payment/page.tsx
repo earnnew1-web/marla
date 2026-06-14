@@ -13,8 +13,12 @@ import { PaymentMethodSection } from "@/components/customer/PaymentMethodSection
 import { PaymentSlipUpload } from "@/components/customer/PaymentSlipUpload";
 import { PaymentTotalSummary } from "@/components/customer/PaymentTotalSummary";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { refreshLineProfile } from "@/components/line/LiffProvider";
-import { finalizeCustomerLineFields, resolveActiveLineProfile } from "@/lib/line/customer-fields";
+import { getStoredLineProfile, refreshLineProfile } from "@/components/line/LiffProvider";
+import {
+  applyLineProfileToCustomer,
+  buildLineSubmitPayload,
+  resolveLineProfile
+} from "@/lib/line/customer-fields";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { isCashPaymentBlocked, resolvePaymentMethod } from "@/lib/payment";
 import { loadReturnMethodState } from "@/lib/return-method";
@@ -92,12 +96,12 @@ export default function PaymentPage() {
     };
 
     const profile = await refreshLineProfile();
+    const activeProfile = profile ?? resolveLineProfile(getStoredLineProfile(), draft.customer);
     const customer = draft.customer
-      ? finalizeCustomerLineFields(
-          draft.customer,
-          profile ?? resolveActiveLineProfile(null, draft.customer)
-        )
+      ? applyLineProfileToCustomer(draft.customer, activeProfile)
       : draft.customer;
+
+    console.log("[Submit] line payload", customer ? buildLineSubmitPayload(customer) : null);
 
     const nextDraft: DraftOrder = { ...draft, customer, payment };
     saveDraft(nextDraft);

@@ -1,11 +1,18 @@
 import type { DraftOrder, Order } from "@/lib/types";
 
 async function parseJson<T>(response: Response): Promise<T> {
-  const payload = (await response.json()) as T & { error?: string; details?: string | null };
+  let payload: T & { error?: string; details?: string | null };
+  try {
+    payload = (await response.json()) as T & { error?: string; details?: string | null };
+  } catch {
+    throw new Error(`Request failed (${response.status})`);
+  }
+
   if (!response.ok) {
     const message = [payload.error, payload.details].filter(Boolean).join(" — ");
-    throw new Error(message || "Request failed");
+    throw new Error(message || `Request failed (${response.status})`);
   }
+
   return payload;
 }
 
