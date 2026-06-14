@@ -20,6 +20,7 @@ type OrderNotificationRow = {
   order_code: string;
   total_price: number;
   status: string;
+  scan_drive_url?: string | null;
   customer: {
     phone: string;
     line_user_id: string | null;
@@ -32,7 +33,7 @@ async function fetchOrderForLineNotification(orderId: string): Promise<OrderNoti
   const { data, error } = await supabase
     .from(TABLES.orders)
     .select(
-      `id, order_code, total_price, status, customer:${TABLES.customers}(phone, line_user_id, line_connected)`
+      `id, order_code, total_price, status, scan_drive_url, customer:${TABLES.customers}(phone, line_user_id, line_connected)`
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -46,6 +47,7 @@ async function fetchOrderForLineNotification(orderId: string): Promise<OrderNoti
     order_code: data.order_code,
     total_price: data.total_price,
     status: data.status,
+    scan_drive_url: data.scan_drive_url ?? null,
     customer: customer ?? null
   };
 }
@@ -93,7 +95,8 @@ async function sendFlexForOrder(
       orderCode: row.order_code,
       totalPrice: row.total_price,
       customerPhone: row.customer?.phone ?? "",
-      statusKey
+      statusKey,
+      scanDriveUrl: row.scan_drive_url
     });
 
     await sendLinePushMessage(lineUserId, flexMessage);

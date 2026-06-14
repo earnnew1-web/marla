@@ -289,6 +289,7 @@ export default function AdminOrderDetailPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Info label="Method" value={formatReturnMethod(order.returnMethod)} />
                 <Info label="File delivery" value={order.delivery.fileDelivery} />
+                <Info label="Google Drive link" value={order.scanDriveUrl ?? undefined} className="sm:col-span-2" />
                 {order.returnMethod === "post" ? (
                   <>
                     <Info label="Recipient name" value={order.delivery.recipientName} />
@@ -392,9 +393,8 @@ export default function AdminOrderDetailPage() {
           </Card>
 
           <OrderStatusControl
-            orderId={order.id}
-            status={order.status}
-            onUpdated={(status) => setOrder({ ...order, status })}
+            order={order}
+            onUpdated={(updated) => setOrder(updated)}
           />
 
           <Card>

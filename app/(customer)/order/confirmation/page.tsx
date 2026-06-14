@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
+import { ScanDriveLinkCard } from "@/components/customer/ScanDriveLinkCard";
 import { StatusTimeline } from "@/components/customer/StatusTimeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import { useOrderStatusRealtime } from "@/lib/customer/useOrderStatusRealtime";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { orderCode, pageTitleLarge, stepEyebrow } from "@/lib/typography";
 import { getLastOrderCode } from "@/lib/storage";
-import type { OrderStatus } from "@/lib/types";
+import type { Order } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function ConfirmationPage() {
@@ -36,24 +37,32 @@ function ConfirmationContent() {
   const searchParams = useSearchParams();
   const { t } = useCustomerLanguage();
   const [code, setCode] = useState("");
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [status, setStatus] = useState<OrderStatus>("Received");
+  const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useOrderStatusRealtime(orderId, setStatus);
+  useOrderStatusRealtime(order?.id, (update) => {
+    setOrder((current) =>
+      current
+        ? {
+            ...current,
+            status: update.status,
+            scanDriveUrl: update.scanDriveUrl ?? current.scanDriveUrl
+          }
+        : current
+    );
+  });
 
-  const loadLatestOrder = useCallback(async (orderCode: string) => {
-    if (!orderCode.trim()) {
+  const loadLatestOrder = useCallback(async (orderCodeValue: string) => {
+    if (!orderCodeValue.trim()) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      const { order } = await fetchOrderByCode(orderCode);
-      if (order) {
-        setOrderId(order.id);
-        setStatus(order.status);
+      const { order: found } = await fetchOrderByCode(orderCodeValue);
+      if (found) {
+        setOrder(found);
       }
     } catch (error) {
       console.error(error);
@@ -94,7 +103,8 @@ function ConfirmationContent() {
             {loading ? t.confirmation.refreshing : t.confirmation.refresh}
           </Button>
 
-          <StatusTimeline status={status} />
+          <StatusTimeline status={order?.status ?? "Received"} />
+          {order ? <ScanDriveLinkCard order={order} /> : null}
 
           <div className="flex justify-center pt-2">
             <Button asChild variant="outline" className="h-11 min-w-[10rem]">

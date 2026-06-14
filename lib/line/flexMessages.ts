@@ -1,10 +1,10 @@
 import { getLineOaUrl, getSiteUrl } from "@/lib/line/env";
+import { ORDER_PROGRESS_STEPS } from "@/lib/order-progress";
 import { LINE_STATUS_COPY, type LineStatusKey } from "@/lib/line/status";
 
 const BRAND = {
   ink: "#2B211C",
   paper: "#FAF7F2",
-  accent: "#C45C4A",
   muted: "#8A7A70",
   border: "#E8DFD6"
 } as const;
@@ -14,14 +14,26 @@ export type FlexOrderInput = {
   totalPrice: number;
   customerPhone: string;
   statusKey: LineStatusKey;
+  scanDriveUrl?: string | null;
 };
 
-function logoUrl() {
-  return `${getSiteUrl()}/tomato.png`;
+function statusHeroImagePath(statusKey: LineStatusKey) {
+  switch (statusKey) {
+    case "developing_scanning":
+      return ORDER_PROGRESS_STEPS[1].image;
+    case "ready":
+      return ORDER_PROGRESS_STEPS[2].image;
+    case "completed":
+      return ORDER_PROGRESS_STEPS[3].image;
+    case "cancelled":
+      return ORDER_PROGRESS_STEPS[0].image;
+    default:
+      return ORDER_PROGRESS_STEPS[0].image;
+  }
 }
 
-function trackOrderUrl() {
-  return `${getSiteUrl()}/track`;
+function statusHeroUrl(statusKey: LineStatusKey) {
+  return `${getSiteUrl()}${statusHeroImagePath(statusKey)}`;
 }
 
 function infoRow(label: string, value: string) {
@@ -51,22 +63,35 @@ function infoRow(label: string, value: string) {
   };
 }
 
-function footerButton(label: string, uri: string, style: "primary" | "secondary" = "primary") {
-  return {
+export function buildOrderStatusFlex(order: FlexOrderInput) {
+  const copy = LINE_STATUS_COPY[order.statusKey];
+  const scanDriveUrl = order.scanDriveUrl?.trim();
+  const footerButtons = [];
+
+  if (scanDriveUrl && (order.statusKey === "ready" || order.statusKey === "completed")) {
+    footerButtons.push({
+      type: "button" as const,
+      style: "primary" as const,
+      color: "#C45C4A",
+      height: "sm" as const,
+      action: {
+        type: "uri" as const,
+        label: "Open Google Drive",
+        uri: scanDriveUrl
+      }
+    });
+  }
+
+  footerButtons.push({
     type: "button" as const,
-    style,
-    color: style === "primary" ? BRAND.accent : undefined,
+    style: "secondary" as const,
     height: "sm" as const,
     action: {
       type: "uri" as const,
-      label,
-      uri
+      label: "Contact Marla Film Lab",
+      uri: getLineOaUrl()
     }
-  };
-}
-
-export function buildOrderStatusFlex(order: FlexOrderInput) {
-  const copy = LINE_STATUS_COPY[order.statusKey];
+  });
 
   return {
     type: "flex" as const,
@@ -76,10 +101,10 @@ export function buildOrderStatusFlex(order: FlexOrderInput) {
       size: "mega" as const,
       hero: {
         type: "image" as const,
-        url: logoUrl(),
+        url: statusHeroUrl(order.statusKey),
         size: "full" as const,
-        aspectRatio: "20:13" as const,
-        aspectMode: "cover" as const,
+        aspectRatio: "1:1" as const,
+        aspectMode: "fit" as const,
         backgroundColor: BRAND.paper
       },
       body: {
@@ -90,27 +115,10 @@ export function buildOrderStatusFlex(order: FlexOrderInput) {
         contents: [
           {
             type: "text" as const,
-            text: "Marla Film Lab",
-            size: "xs" as const,
-            color: BRAND.accent,
-            weight: "bold" as const
-          },
-          {
-            type: "text" as const,
-            text: copy.title,
-            weight: "bold" as const,
-            size: "lg" as const,
-            color: BRAND.ink,
-            margin: "sm" as const,
-            wrap: true
-          },
-          {
-            type: "text" as const,
             text: copy.statusLabel,
             weight: "bold" as const,
-            size: "md" as const,
-            color: BRAND.accent,
-            margin: "sm" as const,
+            size: "xl" as const,
+            color: BRAND.ink,
             wrap: true
           },
           {
@@ -126,8 +134,7 @@ export function buildOrderStatusFlex(order: FlexOrderInput) {
             margin: "lg" as const,
             color: BRAND.border
           },
-          infoRow("Order code", order.orderCode),
-          infoRow("Status", copy.statusLabel),
+          infoRow("Order No.", order.orderCode),
           infoRow("Total", `${order.totalPrice.toLocaleString("en-US")} THB`)
         ]
       },
@@ -137,10 +144,7 @@ export function buildOrderStatusFlex(order: FlexOrderInput) {
         spacing: "sm" as const,
         backgroundColor: BRAND.paper,
         paddingAll: "16px" as const,
-        contents: [
-          footerButton("Track Order", trackOrderUrl(), "primary"),
-          footerButton("Contact Marla Film Lab", getLineOaUrl(), "secondary")
-        ]
+        contents: footerButtons
       }
     }
   };

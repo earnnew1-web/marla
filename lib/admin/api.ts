@@ -67,11 +67,14 @@ export async function confirmAdminOrder(id: string) {
   return { order: payload.order };
 }
 
-export async function patchAdminOrderStatus(id: string, status: OrderStatus) {
+export async function patchAdminOrderStatus(
+  id: string,
+  requestBody: { status: OrderStatus; scanDriveUrl?: string }
+) {
   const response = await fetch(`/api/admin/orders/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status })
+    body: JSON.stringify(requestBody)
   });
   const payload = (await response.json()) as {
     success?: boolean;

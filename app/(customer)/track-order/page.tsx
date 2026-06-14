@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
 import { FilmDeliveryReminder } from "@/components/customer/FilmDeliveryReminder";
 import { OrderSummary } from "@/components/customer/OrderSummary";
+import { ScanDriveLinkCard } from "@/components/customer/ScanDriveLinkCard";
 import { StatusTimeline } from "@/components/customer/StatusTimeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -27,8 +28,16 @@ export default function TrackOrderPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useOrderStatusRealtime(order?.id, (status) => {
-    setOrder((current) => (current ? { ...current, status } : current));
+  useOrderStatusRealtime(order?.id, (update) => {
+    setOrder((current) =>
+      current
+        ? {
+            ...current,
+            status: update.status,
+            scanDriveUrl: update.scanDriveUrl ?? current.scanDriveUrl
+          }
+        : current
+    );
   });
 
   const fetchOrder = useCallback(
@@ -130,6 +139,7 @@ export default function TrackOrderPage() {
                 </Button>
 
                 <StatusTimeline status={order.status} />
+                <ScanDriveLinkCard order={order} />
               </CardContent>
             </Card>
             {order.filmDeliveryMethod === "parcel" ? <FilmDeliveryReminder /> : null}

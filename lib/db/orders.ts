@@ -158,15 +158,23 @@ export async function fetchOrderByCodeAndPhone(code: string, phone: string): Pro
   return order.customer.phone.trim() === phone.trim() ? order : null;
 }
 
-export async function updateOrderStatusInDb(id: string, status: OrderStatus): Promise<Order> {
+export async function updateOrderStatusInDb(
+  id: string,
+  status: OrderStatus,
+  options?: { scanDriveUrl?: string | null }
+): Promise<Order> {
   const supabase = createAdminSupabaseClient();
 
-  const { error } = await supabase
-    .from(TABLES.orders)
-    .update({ status, updated_at: nowIso() })
-    .eq("id", id)
-    .select()
-    .single();
+  const patch: { status: OrderStatus; updated_at: string; scan_drive_url?: string | null } = {
+    status,
+    updated_at: nowIso()
+  };
+
+  if (options && "scanDriveUrl" in options) {
+    patch.scan_drive_url = options.scanDriveUrl?.trim() || null;
+  }
+
+  const { error } = await supabase.from(TABLES.orders).update(patch).eq("id", id).select().single();
 
   if (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "PGRST116") {

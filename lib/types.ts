@@ -119,6 +119,7 @@ export type Order = {
   updatedAt?: string;
   filmDeliveryMethod?: FilmDeliveryMethod;
   returnMethod?: ReturnMethod;
+  scanDriveUrl?: string | null;
 };
 
 export type DraftOrder = {

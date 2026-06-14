@@ -58,6 +58,7 @@ export function getOrderSelect() {
     "total_price",
     "created_at",
     "updated_at",
+    "scan_drive_url",
     `customer:${TABLES.customers}(id, name, phone, line_id, email, allow_social_share, instagram_username, line_user_id, line_display_name, line_picture_url, line_connected, created_at)`,
     `film_rolls:${TABLES.filmRolls}(*)`,
     `payment:${TABLES.payments}(method, status, slip_url, slip_file_name, bank_name, account_number, account_name, amount, confirmed_at)`
@@ -131,6 +132,7 @@ export type DbOrderRow = {
   total_price: number;
   created_at: string;
   updated_at?: string | null;
+  scan_drive_url?: string | null;
   customer: DbCustomer | DbCustomer[] | null;
   film_rolls: DbFilmRoll[] | null;
   payment?: DbPaymentRow | DbPaymentRow[] | null;
@@ -215,7 +217,8 @@ export function mapOrder(row: DbOrderRow): Order {
     filmDeliveryMethod: (row.film_delivery_method as Order["filmDeliveryMethod"]) ?? "drop_off",
     returnMethod:
       (row.return_method as Order["returnMethod"]) ??
-      filmReturnToReturnMethod(row.film_return as DeliveryInfo["filmReturn"])
+      filmReturnToReturnMethod(row.film_return as DeliveryInfo["filmReturn"]),
+    scanDriveUrl: row.scan_drive_url ?? null
   };
 }
 

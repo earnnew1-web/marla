@@ -225,6 +225,11 @@ export const customerCopy = {
       filmDeliveryReminderText:
         "Please send your film to our lab so we can start processing your order."
     },
+    scanDelivery: {
+      label: "Scan files",
+      description: "Your scanned files are ready. Open the Google Drive link below.",
+      openLink: "Open Google Drive"
+    },
     orderSummary: {
       customer: "Customer",
       customerInfo: "Customer info",
@@ -482,6 +487,11 @@ export const customerCopy = {
       failed: "ไม่สามารถติดตามออเดอร์ได้",
       filmDeliveryReminderTitle: "อย่าลืมส่งฟิล์มมานะ",
       filmDeliveryReminderText: "กรุณาส่งฟิล์มมาที่ร้านเพื่อเริ่มดำเนินการออเดอร์"
+    },
+    scanDelivery: {
+      label: "ไฟล์สแกน",
+      description: "ไฟล์สแกนของคุณพร้อมแล้ว กดเปิดลิงก์ Google Drive ด้านล่าง",
+      openLink: "เปิด Google Drive"
     },
     orderSummary: {
       customer: "ลูกค้า",

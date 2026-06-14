@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -15,34 +16,73 @@ import {
 } from "@/components/ui/select";
 import { patchAdminOrderStatus } from "@/lib/admin/api";
 import { notifyAdminLineStatus, toastStatusUpdateWithLine } from "@/lib/admin/line-notification";
+import { orderRequiresScanDriveUrl } from "@/lib/order-scan";
 import { orderStatuses, orderStatusLabels } from "@/lib/options";
 import { cn } from "@/lib/utils";
-import type { OrderStatus } from "@/lib/types";
+import type { Order, OrderStatus } from "@/lib/types";
 
 export function OrderStatusControl({
-  orderId,
-  status,
+  order,
   onUpdated
 }: {
-  orderId: string;
-  status: OrderStatus;
-  onUpdated: (status: OrderStatus) => void;
+  order: Order;
+  onUpdated: (order: Order) => void;
 }) {
-  const [value, setValue] = useState(status);
+  const [value, setValue] = useState(order.status);
+  const [scanDriveUrl, setScanDriveUrl] = useState(order.scanDriveUrl ?? "");
   const [loading, setLoading] = useState(false);
+  const requiresScanUrl = orderRequiresScanDriveUrl(order);
+
+  useEffect(() => {
+    setValue(order.status);
+    setScanDriveUrl(order.scanDriveUrl ?? "");
+  }, [order.status, order.scanDriveUrl]);
 
   const updateStatus = async (next: OrderStatus) => {
     if (next === value) return;
 
+    if (next === "Ready" && requiresScanUrl && !scanDriveUrl.trim()) {
+      toast.error("Please enter the Google Drive URL before marking this scan order Ready.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const { order } = await patchAdminOrderStatus(orderId, next);
-      setValue(order.status);
-      onUpdated(order.status);
-      const lineResult = await notifyAdminLineStatus(orderId);
+      const payload: { status: OrderStatus; scanDriveUrl?: string } = { status: next };
+      if (requiresScanUrl && scanDriveUrl.trim()) {
+        payload.scanDriveUrl = scanDriveUrl.trim();
+      }
+
+      const { order: updated } = await patchAdminOrderStatus(order.id, payload);
+      setValue(updated.status);
+      setScanDriveUrl(updated.scanDriveUrl ?? "");
+      onUpdated(updated);
+      const lineResult = await notifyAdminLineStatus(order.id);
       toastStatusUpdateWithLine(lineResult);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update status");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveScanDriveUrl = async () => {
+    if (!scanDriveUrl.trim()) {
+      toast.error("Please enter the Google Drive URL.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { order: updated } = await patchAdminOrderStatus(order.id, {
+        status: order.status,
+        scanDriveUrl: scanDriveUrl.trim()
+      });
+      setScanDriveUrl(updated.scanDriveUrl ?? "");
+      onUpdated(updated);
+      toast.success("Google Drive link saved");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save Google Drive URL");
     } finally {
       setLoading(false);
     }
@@ -64,6 +104,34 @@ export function OrderStatusControl({
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {requiresScanUrl ? (
+          <div className="rounded-lg border border-dashed border-accent/30 bg-accent/5 p-4">
+            <Label htmlFor="scan-drive-url">Google Drive URL</Label>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Required when marking a scan order as Ready so the customer receives their file link.
+            </p>
+            <Input
+              id="scan-drive-url"
+              className="mt-3 h-11"
+              value={scanDriveUrl}
+              placeholder="https://drive.google.com/..."
+              onChange={(event) => setScanDriveUrl(event.target.value)}
+              disabled={loading}
+            />
+            {value === "Ready" ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3"
+                disabled={loading}
+                onClick={saveScanDriveUrl}
+              >
+                Save Google Drive link
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
           {orderStatuses.map((option) => (
             <Button

@@ -43,7 +43,7 @@ export function InlineStatusSelect({
     onLoadingChange?.(true);
 
     try {
-      const { order } = await patchAdminOrderStatus(orderId, next);
+      const { order } = await patchAdminOrderStatus(orderId, { status: next });
       setValue(normalizeStatusValue(order.status));
       setPhase("success");
       onUpdated(order);

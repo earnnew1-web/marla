@@ -8,14 +8,20 @@ import type { OrderStatus } from "@/lib/types";
 
 type OrderRow = {
   status?: string;
+  scan_drive_url?: string | null;
+};
+
+export type OrderRealtimeUpdate = {
+  status: OrderStatus;
+  scanDriveUrl?: string | null;
 };
 
 export function useOrderStatusRealtime(
   orderId: string | null | undefined,
-  onStatusChange: (status: OrderStatus) => void
+  onUpdate: (update: OrderRealtimeUpdate) => void
 ) {
-  const onStatusChangeRef = useRef(onStatusChange);
-  onStatusChangeRef.current = onStatusChange;
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
 
   useEffect(() => {
     if (!orderId) return;
@@ -35,9 +41,10 @@ export function useOrderStatusRealtime(
           const row = payload.new as OrderRow;
           if (typeof row.status !== "string") return;
 
-          const status = normalizeStatus(row.status);
-          console.log("Fetched latest order status", status);
-          onStatusChangeRef.current(status);
+          onUpdateRef.current({
+            status: normalizeStatus(row.status),
+            scanDriveUrl: row.scan_drive_url ?? null
+          });
         }
       )
       .subscribe();
