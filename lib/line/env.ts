@@ -29,6 +29,21 @@ export function getSiteUrl() {
   return "https://marlafilmlab.com";
 }
 
+export function getLiffEndpointPath() {
+  return "/order";
+}
+
+export function getLiffEndpointUrl() {
+  return `${getSiteUrl()}${getLiffEndpointPath()}`;
+}
+
+export function getLiffLoginRedirectUri() {
+  if (typeof window !== "undefined") {
+    return getLiffEndpointUrl();
+  }
+  return getLiffEndpointUrl();
+}
+
 export function getLineOaUrl() {
   const configured = process.env.NEXT_PUBLIC_LINE_OA_URL?.trim();
   if (configured) return configured;

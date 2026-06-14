@@ -1,4 +1,5 @@
 import type { LineProfile } from "@/components/line/LiffProvider";
+import { getStoredLineProfile } from "@/components/line/LiffProvider";
 import type { Customer, CustomerDraft } from "@/lib/types";
 
 export function mergeCustomerLineProfile(
@@ -15,6 +16,13 @@ export function mergeCustomerLineProfile(
     };
   }
 
+  if (customer.lineUserId?.trim()) {
+    return {
+      ...customer,
+      lineConnected: customer.lineConnected ?? true
+    };
+  }
+
   return {
     ...customer,
     lineUserId: null,
@@ -22,6 +30,26 @@ export function mergeCustomerLineProfile(
     linePictureUrl: null,
     lineConnected: false
   };
+}
+
+export function resolveActiveLineProfile(
+  profile: LineProfile | null | undefined,
+  draft?: CustomerDraft | null
+): LineProfile | null {
+  if (profile?.userId) return profile;
+
+  const stored = getStoredLineProfile();
+  if (stored?.userId) return stored;
+
+  if (draft?.lineUserId?.trim()) {
+    return {
+      userId: draft.lineUserId.trim(),
+      displayName: draft.lineDisplayName?.trim() || draft.lineUserId.trim(),
+      pictureUrl: draft.linePictureUrl ?? undefined
+    };
+  }
+
+  return null;
 }
 
 export function customerLineLabel(customer?: Customer | CustomerDraft | null): string | undefined {

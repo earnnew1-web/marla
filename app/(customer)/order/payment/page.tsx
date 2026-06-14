@@ -13,8 +13,8 @@ import { PaymentMethodSection } from "@/components/customer/PaymentMethodSection
 import { PaymentSlipUpload } from "@/components/customer/PaymentSlipUpload";
 import { PaymentTotalSummary } from "@/components/customer/PaymentTotalSummary";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { getStoredLineProfile } from "@/components/line/LiffProvider";
-import { mergeCustomerLineProfile } from "@/lib/line/customer-fields";
+import { refreshLineProfile } from "@/components/line/LiffProvider";
+import { mergeCustomerLineProfile, resolveActiveLineProfile } from "@/lib/line/customer-fields";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { isCashPaymentBlocked, resolvePaymentMethod } from "@/lib/payment";
 import { loadReturnMethodState } from "@/lib/return-method";
@@ -91,8 +91,10 @@ export default function PaymentPage() {
         : {})
     };
 
-    const profile = getStoredLineProfile();
-    const customer = draft.customer ? mergeCustomerLineProfile(draft.customer, profile) : draft.customer;
+    const profile = await refreshLineProfile();
+    const customer = draft.customer
+      ? mergeCustomerLineProfile(draft.customer, profile ?? resolveActiveLineProfile(null, draft.customer))
+      : draft.customer;
 
     const nextDraft: DraftOrder = { ...draft, customer, payment };
     saveDraft(nextDraft);

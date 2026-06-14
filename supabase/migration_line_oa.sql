@@ -14,8 +14,8 @@ alter table public.beta_customers add column if not exists line_connected boolea
 create index if not exists customers_line_user_id_idx on public.customers (line_user_id);
 create index if not exists beta_customers_line_user_id_idx on public.beta_customers (line_user_id);
 
--- Rich Menu setup (configure in LINE Official Account Manager)
--- 1. ส่งฟิล์ม / New Order  -> LIFF URL or https://marlafilmlab.com/order/customer-info
+-- LIFF Endpoint URL: https://marlafilmlab.com/order
+-- Rich Menu LIFF URL: https://liff.line.me/2010393020-8ooxNuQs
 -- 2. Track Order           -> https://marlafilmlab.com/track-order
 -- 3. Price Guide           -> https://marlafilmlab.com (homepage)
 -- 4. Contact Store         -> LINE OA chat / https://line.me/R/ti/p/@marlafilmlab

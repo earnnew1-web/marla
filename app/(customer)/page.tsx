@@ -38,7 +38,7 @@ export default function HomePage() {
           </div>
           <div className="flex w-full flex-col gap-4">
             <Button asChild size="lg" className="min-h-16 w-full text-base">
-              <Link href="/order/customer-info">{t.home.startOrder}</Link>
+              <Link href="/order">{t.home.startOrder}</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="min-h-16 w-full text-base">
               <Link href="/track-order">{t.home.trackOrder}</Link>
