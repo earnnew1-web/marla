@@ -19,27 +19,27 @@ export const LINE_STATUS_COPY: Record<
   },
   received: {
     title: "อัปเดตสถานะออเดอร์",
-    statusLabel: "รับฟิล์ม",
+    statusLabel: "📥 รับฟิล์มแล้ว",
     description: "ฟิล์มของคุณถึง Marla Film Lab แล้ว และอยู่ในคิวพร้อมดำเนินการ"
   },
   developing_scanning: {
     title: "อัปเดตสถานะออเดอร์",
-    statusLabel: "กำลังล้างและสแกน",
+    statusLabel: "🧪 กำลังล้างและสแกน",
     description: "ทีมงานกำลังล้างและสแกนฟิล์มของคุณอยู่ — ขอบคุณที่ไว้วางใจ Marla"
   },
   ready: {
     title: "อัปเดตสถานะออเดอร์",
-    statusLabel: "พร้อมแล้ว",
+    statusLabel: "✨ พร้อมแล้ว",
     description: "ไฟล์/ฟิล์มของคุณพร้อมแล้ว สามารถติดตามรายละเอียดหรือติดต่อร้านได้เลย"
   },
   completed: {
     title: "อัปเดตสถานะออเดอร์",
-    statusLabel: "เสร็จสิ้น",
+    statusLabel: "📦 เสร็จสิ้น",
     description: "ออเดอร์ของคุณเสร็จสมบูรณ์แล้ว ขอบคุณที่ใช้บริการ Marla Film Lab"
   },
   cancelled: {
     title: "อัปเดตสถานะออเดอร์",
-    statusLabel: "ยกเลิก",
+    statusLabel: "⚠️ ยกเลิกออเดอร์",
     description: "ออเดอร์นี้ถูกยกเลิกแล้ว หากมีข้อสงสัยกรุณาติดต่อร้าน"
   }
 };

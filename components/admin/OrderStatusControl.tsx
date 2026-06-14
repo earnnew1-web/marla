@@ -14,7 +14,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { patchAdminOrderStatus } from "@/lib/admin/api";
-import { notifyAdminLineStatus } from "@/lib/admin/line-notification";
+import { notifyAdminLineStatus, toastStatusUpdateWithLine } from "@/lib/admin/line-notification";
 import { orderStatuses, orderStatusLabels } from "@/lib/options";
 import { cn } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/types";
@@ -32,13 +32,15 @@ export function OrderStatusControl({
   const [loading, setLoading] = useState(false);
 
   const updateStatus = async (next: OrderStatus) => {
+    if (next === value) return;
+
     setLoading(true);
     try {
       const { order } = await patchAdminOrderStatus(orderId, next);
       setValue(order.status);
       onUpdated(order.status);
-      toast.success("Status updated");
-      void notifyAdminLineStatus(orderId, order.status);
+      const lineResult = await notifyAdminLineStatus(orderId);
+      toastStatusUpdateWithLine(lineResult);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update status");
     } finally {

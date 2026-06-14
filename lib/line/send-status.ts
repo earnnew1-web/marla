@@ -1,12 +1,14 @@
-import { pushLineFlexMessage } from "@/lib/line/client";
-import { buildOrderStatusFlexMessage } from "@/lib/line/flex-messages";
+import { normalizeStatusValue } from "@/lib/admin/status-styles";
+import { sendLinePushMessage } from "@/lib/line/client";
+import { buildOrderStatusFlex } from "@/lib/line/flexMessages";
 import { hasLineMessagingConfigured } from "@/lib/line/env";
-import { parseLineStatusInput, type LineStatusKey } from "@/lib/line/status";
+import { orderStatusToLineKey, parseLineStatusInput, type LineStatusKey } from "@/lib/line/status";
 import { TABLES } from "@/lib/config/tables";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import type { OrderStatus } from "@/lib/types";
 
 export type LineSendResult = {
+  success: boolean;
   sent: boolean;
   linked: boolean;
   skipped?: boolean;
@@ -17,6 +19,7 @@ type OrderNotificationRow = {
   id: string;
   order_code: string;
   total_price: number;
+  status: string;
   customer: {
     phone: string;
     line_user_id: string | null;
@@ -29,7 +32,7 @@ async function fetchOrderForLineNotification(orderId: string): Promise<OrderNoti
   const { data, error } = await supabase
     .from(TABLES.orders)
     .select(
-      `id, order_code, total_price, customer:${TABLES.customers}(phone, line_user_id, line_connected)`
+      `id, order_code, total_price, status, customer:${TABLES.customers}(phone, line_user_id, line_connected)`
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -42,6 +45,7 @@ async function fetchOrderForLineNotification(orderId: string): Promise<OrderNoti
     id: data.id,
     order_code: data.order_code,
     total_price: data.total_price,
+    status: data.status,
     customer: customer ?? null
   };
 }
@@ -54,51 +58,125 @@ function logLineFailure(error: unknown, context: Record<string, unknown> = {}) {
   console.error("[LINE] notification failed:", error, context);
 }
 
-export async function sendLineStatusMessage(
-  orderId: string,
-  status: OrderStatus | LineStatusKey | string
-): Promise<LineSendResult> {
-  if (!hasLineMessagingConfigured()) {
-    logLineSkip("LINE messaging is not configured", { orderId });
-    return { sent: false, linked: false, skipped: true, reason: "LINE messaging is not configured" };
+function successResult(result: Omit<LineSendResult, "success">): LineSendResult {
+  return { success: true, ...result };
+}
+
+function resolveStatusKey(
+  row: OrderNotificationRow,
+  explicitStatus?: OrderStatus | LineStatusKey | string
+): LineStatusKey | null {
+  if (explicitStatus !== undefined) {
+    const parsedExplicit = parseLineStatusInput(String(explicitStatus));
+    if (parsedExplicit) return parsedExplicit;
   }
 
-  const statusKey = typeof status === "string" ? parseLineStatusInput(status) : parseLineStatusInput(status);
-  if (!statusKey) {
-    logLineSkip("Unsupported status for LINE notification", { orderId, status });
-    return { sent: false, linked: false, reason: "Unsupported status for LINE notification" };
+  return orderStatusToLineKey(normalizeStatusValue(row.status));
+}
+
+async function sendFlexForOrder(
+  row: OrderNotificationRow,
+  statusKey: LineStatusKey
+): Promise<LineSendResult> {
+  const lineUserId = row.customer?.line_user_id?.trim();
+  if (!lineUserId) {
+    logLineSkip("No LINE user linked", {
+      orderId: row.id,
+      orderCode: row.order_code,
+      lineConnected: row.customer?.line_connected ?? false
+    });
+    return successResult({ sent: false, linked: false, reason: "No LINE user linked" });
+  }
+
+  try {
+    const flexMessage = buildOrderStatusFlex({
+      orderCode: row.order_code,
+      totalPrice: row.total_price,
+      customerPhone: row.customer?.phone ?? "",
+      statusKey
+    });
+
+    await sendLinePushMessage(lineUserId, flexMessage);
+    console.info("[LINE] notification sent", {
+      orderId: row.id,
+      orderCode: row.order_code,
+      status: statusKey
+    });
+    return successResult({ sent: true, linked: true });
+  } catch (error) {
+    logLineFailure(error, { orderId: row.id, orderCode: row.order_code, status: statusKey });
+    return {
+      success: false,
+      sent: false,
+      linked: true,
+      reason: error instanceof Error ? error.message : "LINE API request failed"
+    };
+  }
+}
+
+/** Primary entry: read current order status from DB and notify the linked LINE user. */
+export async function sendLineStatusNotificationForOrder(orderId: string): Promise<LineSendResult> {
+  if (!hasLineMessagingConfigured()) {
+    logLineSkip("LINE messaging is not configured", { orderId });
+    return successResult({
+      sent: false,
+      linked: false,
+      skipped: true,
+      reason: "LINE messaging is not configured"
+    });
   }
 
   const row = await fetchOrderForLineNotification(orderId);
   if (!row) {
     logLineSkip("Order not found", { orderId });
-    return { sent: false, linked: false, reason: "Order not found" };
+    return { success: false, sent: false, linked: false, reason: "Order not found" };
   }
 
-  const lineUserId = row.customer?.line_user_id?.trim();
-  if (!lineUserId) {
-    logLineSkip("No LINE user linked", {
-      orderId,
-      orderCode: row.order_code,
-      lineConnected: row.customer?.line_connected ?? false
+  const statusKey = resolveStatusKey(row);
+  if (!statusKey) {
+    logLineSkip("Unsupported status for LINE notification", { orderId, status: row.status });
+    return successResult({
+      sent: false,
+      linked: Boolean(row.customer?.line_user_id?.trim()),
+      skipped: true,
+      reason: "Unsupported status for LINE notification"
     });
-    return { sent: false, linked: false, reason: "No LINE user linked" };
   }
 
-  try {
-    const flexMessage = buildOrderStatusFlexMessage(statusKey, {
-      orderCode: row.order_code,
-      totalPrice: row.total_price,
-      customerPhone: row.customer?.phone ?? ""
+  return sendFlexForOrder(row, statusKey);
+}
+
+export async function sendLineStatusMessage(
+  orderId: string,
+  status?: OrderStatus | LineStatusKey | string
+): Promise<LineSendResult> {
+  if (!hasLineMessagingConfigured()) {
+    logLineSkip("LINE messaging is not configured", { orderId });
+    return successResult({
+      sent: false,
+      linked: false,
+      skipped: true,
+      reason: "LINE messaging is not configured"
     });
-
-    await pushLineFlexMessage(lineUserId, flexMessage);
-    console.info("[LINE] notification sent", { orderId, orderCode: row.order_code, status: statusKey });
-    return { sent: true, linked: true };
-  } catch (error) {
-    logLineFailure(error, { orderId, orderCode: row.order_code, status: statusKey });
-    throw error;
   }
+
+  const row = await fetchOrderForLineNotification(orderId);
+  if (!row) {
+    logLineSkip("Order not found", { orderId });
+    return { success: false, sent: false, linked: false, reason: "Order not found" };
+  }
+
+  const statusKey = resolveStatusKey(row, status);
+  if (!statusKey) {
+    logLineSkip("Unsupported status for LINE notification", { orderId, status: status ?? row.status });
+    return successResult({
+      sent: false,
+      linked: Boolean(row.customer?.line_user_id?.trim()),
+      reason: "Unsupported status for LINE notification"
+    });
+  }
+
+  return sendFlexForOrder(row, statusKey);
 }
 
 type OrderReceivedContext = {
@@ -117,7 +195,12 @@ export async function sendLineOrderReceivedMessage(orderId: string) {
 export async function sendLineOrderReceivedFromContext(context: OrderReceivedContext): Promise<LineSendResult> {
   if (!hasLineMessagingConfigured()) {
     logLineSkip("LINE messaging is not configured", { orderId: context.orderId });
-    return { sent: false, linked: false, skipped: true, reason: "LINE messaging is not configured" };
+    return successResult({
+      sent: false,
+      linked: false,
+      skipped: true,
+      reason: "LINE messaging is not configured"
+    });
   }
 
   const lineUserId = context.lineUserId?.trim();
@@ -126,22 +209,23 @@ export async function sendLineOrderReceivedFromContext(context: OrderReceivedCon
       orderId: context.orderId,
       orderCode: context.orderCode
     });
-    return { sent: false, linked: false, reason: "No LINE user linked" };
+    return successResult({ sent: false, linked: false, reason: "No LINE user linked" });
   }
 
   try {
-    const flexMessage = buildOrderStatusFlexMessage("order_received", {
+    const flexMessage = buildOrderStatusFlex({
       orderCode: context.orderCode,
       totalPrice: context.totalPrice,
-      customerPhone: context.customerPhone
+      customerPhone: context.customerPhone,
+      statusKey: "order_received"
     });
 
-    await pushLineFlexMessage(lineUserId, flexMessage);
+    await sendLinePushMessage(lineUserId, flexMessage);
     console.info("[LINE] order_received sent", {
       orderId: context.orderId,
       orderCode: context.orderCode
     });
-    return { sent: true, linked: true };
+    return successResult({ sent: true, linked: true });
   } catch (error) {
     logLineFailure(error, {
       orderId: context.orderId,
@@ -149,6 +233,7 @@ export async function sendLineOrderReceivedFromContext(context: OrderReceivedCon
       status: "order_received"
     });
     return {
+      success: false,
       sent: false,
       linked: true,
       reason: error instanceof Error ? error.message : "LINE API request failed"

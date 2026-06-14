@@ -14,7 +14,11 @@ import {
   confirmAdminOrderPayment,
   fetchAdminOrder
 } from "@/lib/admin/api";
-import { notifyAdminLineStatus } from "@/lib/admin/line-notification";
+import {
+  notifyAdminLineStatus,
+  sendAdminLineStatusNotification,
+  toastLineTestResult
+} from "@/lib/admin/line-notification";
 import {
   formatFilmDeliveryMethod,
   formatPaymentMethod,
@@ -36,6 +40,7 @@ export default function AdminOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState<"payment" | "order" | null>(null);
+  const [lineTestLoading, setLineTestLoading] = useState(false);
 
   useEffect(() => {
     fetchAdminOrder(params.id)
@@ -59,8 +64,17 @@ export default function AdminOrderDetailPage() {
     try {
       const { order: updated } = await confirmAdminOrderPayment(order.id);
       setOrder(updated);
-      toast.success("Payment confirmed");
-      void notifyAdminLineStatus(updated.id, updated.status);
+      const lineResult = await notifyAdminLineStatus(updated.id);
+      if (lineResult?.sent) {
+        toast.success("Payment confirmed and LINE notification sent");
+      } else if (lineResult && !lineResult.linked) {
+        toast.success("Payment confirmed. No LINE linked.");
+      } else {
+        toast.success("Payment confirmed");
+      }
+      if (lineResult && lineResult.linked && !lineResult.sent && !lineResult.skipped) {
+        toast.error("Payment confirmed, but LINE notification failed.");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to confirm payment");
     } finally {
@@ -74,12 +88,34 @@ export default function AdminOrderDetailPage() {
     try {
       const { order: updated } = await confirmAdminOrder(order.id);
       setOrder(updated);
-      toast.success("Order confirmed — status set to Received");
-      void notifyAdminLineStatus(updated.id, updated.status);
+      const lineResult = await notifyAdminLineStatus(updated.id);
+      if (lineResult?.sent) {
+        toast.success("Order confirmed and LINE notification sent");
+      } else if (lineResult && !lineResult.linked) {
+        toast.success("Order confirmed — status set to Received. No LINE linked.");
+      } else {
+        toast.success("Order confirmed — status set to Received");
+      }
+      if (lineResult && lineResult.linked && !lineResult.sent && !lineResult.skipped) {
+        toast.error("Order confirmed, but LINE notification failed.");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to confirm order");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const sendTestLine = async () => {
+    if (!order) return;
+    setLineTestLoading(true);
+    try {
+      const result = await sendAdminLineStatusNotification(order.id);
+      toastLineTestResult(result);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "LINE notification failed.");
+    } finally {
+      setLineTestLoading(false);
     }
   };
 
@@ -360,6 +396,22 @@ export default function AdminOrderDetailPage() {
             status={order.status}
             onUpdated={(status) => setOrder({ ...order, status })}
           />
+
+          <Card>
+            <CardHeader>
+              <CardDescription className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
+                LINE debug
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button type="button" variant="outline" onClick={sendTestLine} disabled={lineTestLoading}>
+                {lineTestLoading ? "Sending..." : "Send Test LINE"}
+              </Button>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Sends the current order status Flex Message to the linked LINE user.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AdminLayout>
