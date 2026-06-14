@@ -1,3 +1,4 @@
+import { sendLineOrderReceivedMessage } from "@/lib/line/send-status";
 import { TABLES } from "@/lib/config/tables";
 import { formatOrderCode, nextOrderCodeSequence } from "@/lib/order-code";
 import { defaultPricing } from "@/lib/pricing";
@@ -84,11 +85,17 @@ export async function createOrderInDb(draft: DraftOrder): Promise<Order> {
     throw new Error(formatSupabaseError(paymentResult.error));
   }
 
-  return mapSubmittedOrder(
+  const order = mapSubmittedOrder(
     draft,
     { orderId: orderRow.id, customerId: customerRow.id, orderCode },
     payload
   );
+
+  void sendLineOrderReceivedMessage(orderRow.id).catch((error) => {
+    console.error("[createOrderInDb] LINE notification failed", error);
+  });
+
+  return order;
 }
 
 async function queryOrders(supabase: ReturnType<typeof createServerSupabaseClient>) {

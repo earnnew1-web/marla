@@ -34,7 +34,7 @@ export default function AdminCustomersPage() {
     const value = query.trim().toLowerCase();
     if (!value) return customers;
     return customers.filter((customer) =>
-      `${customer.name} ${customer.phone} ${customer.lineId} ${customer.email}`.toLowerCase().includes(value)
+      `${customer.name} ${customer.phone} ${customer.lineDisplayName ?? customer.lineId} ${customer.email}`.toLowerCase().includes(value)
     );
   }, [customers, query]);
 
@@ -72,7 +72,7 @@ export default function AdminCustomersPage() {
                 <TableRow>
                   <TableHead>Customer Name</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>LINE ID</TableHead>
+                  <TableHead>LINE</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Total Orders</TableHead>
                   <TableHead>Last Order</TableHead>
@@ -83,7 +83,11 @@ export default function AdminCustomersPage() {
                   <TableRow key={customer.phone}>
                     <TableCell className="font-semibold">{customer.name}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
-                    <TableCell>{customer.lineId || "—"}</TableCell>
+                    <TableCell>
+                      {customer.lineConnected
+                        ? customer.lineDisplayName || customer.lineId || "Connected"
+                        : "—"}
+                    </TableCell>
                     <TableCell>{customer.email || "—"}</TableCell>
                     <TableCell>{customer.orderCount}</TableCell>
                     <TableCell>{shortDate(customer.lastOrderAt)}</TableCell>

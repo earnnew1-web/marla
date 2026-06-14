@@ -14,6 +14,7 @@ import {
   confirmAdminOrderPayment,
   fetchAdminOrder
 } from "@/lib/admin/api";
+import { notifyAdminLineStatus } from "@/lib/admin/line-notification";
 import {
   formatFilmDeliveryMethod,
   formatPaymentMethod,
@@ -59,6 +60,7 @@ export default function AdminOrderDetailPage() {
       const { order: updated } = await confirmAdminOrderPayment(order.id);
       setOrder(updated);
       toast.success("Payment confirmed");
+      void notifyAdminLineStatus(updated.id, updated.status);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to confirm payment");
     } finally {
@@ -73,6 +75,7 @@ export default function AdminOrderDetailPage() {
       const { order: updated } = await confirmAdminOrder(order.id);
       setOrder(updated);
       toast.success("Order confirmed — status set to Received");
+      void notifyAdminLineStatus(updated.id, updated.status);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to confirm order");
     } finally {
@@ -147,7 +150,14 @@ export default function AdminOrderDetailPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Info label="Full name" value={order.customer.name} />
                 <Info label="Phone number" value={order.customer.phone} />
-                <Info label="LINE ID" value={order.customer.lineId} />
+                <Info
+                  label="LINE"
+                  value={
+                    order.customer.lineConnected
+                      ? order.customer.lineDisplayName || order.customer.lineId || "Connected"
+                      : "Not connected"
+                  }
+                />
                 <Info label="Email" value={order.customer.email || "—"} />
                 <Info label="Social media consent" value={order.customer.allowSocialShare ? "Yes" : "No"} />
                 <Info

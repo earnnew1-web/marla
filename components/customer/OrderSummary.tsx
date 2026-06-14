@@ -23,6 +23,7 @@ export function OrderSummary({ draft, order }: Props) {
   const filmTotal = rolls.reduce((sum, roll) => sum + priceRoll(roll), 0);
   const shipping = wantsDelivery ? 60 : 0;
   const total = order?.totalPrice ?? priceTotal(rolls, wantsDelivery);
+  const lineLabel = customer?.lineConnected ? customer.lineDisplayName ?? undefined : undefined;
 
   return (
     <div className="space-y-4">
@@ -34,7 +35,7 @@ export function OrderSummary({ draft, order }: Props) {
         <CardContent className="grid gap-3 p-5 text-sm sm:grid-cols-2">
           <Info label={t.orderSummary.name} value={customer?.name} fallback={t.orderSummary.notProvided} />
           <Info label={t.orderSummary.phone} value={customer?.phone} fallback={t.orderSummary.notProvided} />
-          <Info label={t.orderSummary.line} value={customer?.lineId} fallback={t.orderSummary.notProvided} />
+          <Info label={t.orderSummary.line} value={lineLabel} fallback={t.orderSummary.notProvided} />
           <Info label={t.orderSummary.email} value={customer?.email} fallback={t.orderSummary.notProvided} />
           <Info
             label={t.orderSummary.allowSocialShare}

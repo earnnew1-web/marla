@@ -13,6 +13,7 @@ import { PaymentMethodSection } from "@/components/customer/PaymentMethodSection
 import { PaymentSlipUpload } from "@/components/customer/PaymentSlipUpload";
 import { PaymentTotalSummary } from "@/components/customer/PaymentTotalSummary";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { getStoredLineProfile } from "@/components/line/LiffProvider";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { isCashPaymentBlocked, resolvePaymentMethod } from "@/lib/payment";
 import { loadReturnMethodState } from "@/lib/return-method";
@@ -89,7 +90,18 @@ export default function PaymentPage() {
         : {})
     };
 
-    const nextDraft: DraftOrder = { ...draft, payment };
+    const profile = getStoredLineProfile();
+    const customer = draft.customer
+      ? {
+          ...draft.customer,
+          lineUserId: profile?.userId ?? draft.customer.lineUserId ?? null,
+          lineDisplayName: profile?.displayName ?? draft.customer.lineDisplayName ?? null,
+          linePictureUrl: profile?.pictureUrl ?? draft.customer.linePictureUrl ?? null,
+          lineConnected: Boolean(profile?.userId ?? draft.customer.lineUserId)
+        }
+      : draft.customer;
+
+    const nextDraft: DraftOrder = { ...draft, customer, payment };
     saveDraft(nextDraft);
     setSubmitting(true);
 

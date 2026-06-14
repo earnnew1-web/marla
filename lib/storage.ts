@@ -76,6 +76,7 @@ export function submitDraftOrder(draft: DraftOrder): Order {
     customer: {
       id: crypto.randomUUID(),
       ...draft.customer,
+      lineId: draft.customer.lineDisplayName ?? "",
       createdAt: new Date().toISOString()
     },
     rolls,

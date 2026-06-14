@@ -56,7 +56,7 @@ export function getOrderSelect() {
     "total_price",
     "created_at",
     "updated_at",
-    `customer:${TABLES.customers}(id, name, phone, line_id, email, allow_social_share, instagram_username, created_at)`,
+    `customer:${TABLES.customers}(id, name, phone, line_id, email, allow_social_share, instagram_username, line_user_id, line_display_name, line_picture_url, line_connected, created_at)`,
     `film_rolls:${TABLES.filmRolls}(*)`,
     `payment:${TABLES.payments}(method, status, slip_url, slip_file_name, bank_name, account_number, account_name, amount, confirmed_at)`
   ].join(", ");
@@ -70,6 +70,10 @@ type DbCustomer = {
   email: string | null;
   allow_social_share?: boolean | null;
   instagram_username?: string | null;
+  line_user_id?: string | null;
+  line_display_name?: string | null;
+  line_picture_url?: string | null;
+  line_connected?: boolean | null;
   created_at: string;
 };
 
@@ -153,10 +157,14 @@ export function mapOrder(row: DbOrderRow): Order {
     id: customerRow.id,
     name: customerRow.name,
     phone: customerRow.phone,
-    lineId: customerRow.line_id,
+    lineId: customerRow.line_display_name ?? customerRow.line_id ?? "",
     email: customerRow.email ?? "",
     allowSocialShare: customerRow.allow_social_share ?? false,
     instagramUsername: customerRow.instagram_username ?? null,
+    lineUserId: customerRow.line_user_id ?? null,
+    lineDisplayName: customerRow.line_display_name ?? null,
+    linePictureUrl: customerRow.line_picture_url ?? null,
+    lineConnected: customerRow.line_connected ?? false,
     createdAt: customerRow.created_at
   };
 
@@ -229,10 +237,14 @@ export function mapSubmittedOrder(
       id: ids.customerId,
       name: draft.customer.name,
       phone: draft.customer.phone,
-      lineId: draft.customer.lineId,
+      lineId: draft.customer.lineDisplayName ?? draft.customer.lineUserId ?? "",
       email: draft.customer.email ?? "",
       allowSocialShare: draft.customer.allowSocialShare ?? false,
       instagramUsername: draft.customer.instagramUsername ?? null,
+      lineUserId: draft.customer.lineUserId ?? null,
+      lineDisplayName: draft.customer.lineDisplayName ?? null,
+      linePictureUrl: draft.customer.linePictureUrl ?? null,
+      lineConnected: draft.customer.lineConnected ?? false,
       createdAt
     },
     rolls: pricedRolls,
@@ -293,6 +305,8 @@ export function buildCustomerRows(orders: Order[]): AdminCustomerRow[] {
         name: order.customer.name,
         phone: order.customer.phone,
         lineId: order.customer.lineId,
+        lineDisplayName: order.customer.lineDisplayName,
+        lineConnected: order.customer.lineConnected,
         email: order.customer.email,
         orderCount: 1,
         lastOrderAt: order.createdAt
@@ -358,13 +372,17 @@ export function draftToDbPayload(draft: DraftOrder) {
     customer: {
       name: draft.customer.name.trim(),
       phone: draft.customer.phone.trim(),
-      line_id: draft.customer.lineId.trim(),
+      line_id: draft.customer.lineDisplayName?.trim() || "-",
       email: draft.customer.email?.trim() || null,
       allow_social_share: draft.customer.allowSocialShare ?? false,
       instagram_username:
         draft.customer.allowSocialShare && draft.customer.instagramUsername?.trim()
           ? draft.customer.instagramUsername.trim()
-          : null
+          : null,
+      line_user_id: draft.customer.lineUserId?.trim() || null,
+      line_display_name: draft.customer.lineDisplayName?.trim() || null,
+      line_picture_url: draft.customer.linePictureUrl?.trim() || null,
+      line_connected: draft.customer.lineConnected ?? Boolean(draft.customer.lineUserId?.trim())
     },
     order: {
       status: initialStatus,

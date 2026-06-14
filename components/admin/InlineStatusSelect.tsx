@@ -10,6 +10,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { patchAdminOrderStatus } from "@/lib/admin/api";
+import { notifyAdminLineStatus } from "@/lib/admin/line-notification";
 import { statusClassName, normalizeStatusValue } from "@/lib/admin/status-styles";
 import { orderStatuses, orderStatusLabels } from "@/lib/options";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ export function InlineStatusSelect({
       setValue(normalizeStatusValue(order.status));
       setPhase("success");
       onUpdated(order);
+      void notifyAdminLineStatus(orderId, order.status);
       window.setTimeout(() => setPhase("idle"), 1200);
     } catch (error) {
       setValue(previous);

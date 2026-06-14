@@ -37,7 +37,23 @@ export type Customer = {
   email: string;
   allowSocialShare?: boolean;
   instagramUsername?: string | null;
+  lineUserId?: string | null;
+  lineDisplayName?: string | null;
+  linePictureUrl?: string | null;
+  lineConnected?: boolean;
   createdAt: string;
+};
+
+export type CustomerDraft = {
+  name: string;
+  phone: string;
+  email: string;
+  allowSocialShare?: boolean;
+  instagramUsername?: string | null;
+  lineUserId?: string | null;
+  lineDisplayName?: string | null;
+  linePictureUrl?: string | null;
+  lineConnected?: boolean;
 };
 
 export type FilmRoll = {
@@ -105,7 +121,7 @@ export type Order = {
 };
 
 export type DraftOrder = {
-  customer?: Omit<Customer, "id" | "createdAt">;
+  customer?: CustomerDraft;
   rolls: FilmRoll[];
   returnMethod?: ReturnMethod;
   returnShipping?: ReturnShippingInfo;
@@ -135,6 +151,8 @@ export type AdminCustomerRow = {
   name: string;
   phone: string;
   lineId: string;
+  lineDisplayName?: string | null;
+  lineConnected?: boolean;
   email: string;
   orderCount: number;
   lastOrderAt: string;

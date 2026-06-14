@@ -32,13 +32,13 @@ export const customerCopy = {
       subtitle: "No account needed. We only use this to update your order.",
       fullName: "Full Name",
       phone: "Phone Number",
-      lineId: "LINE ID",
       email: "Email (for scanned images)",
       emailPlaceholder: "your@email.com",
       allowSocialShare: "Allow to Share Your Photos on Our Social Media",
       instagramUsername: "Instagram Username (for credit)",
       instagramPlaceholder: "@yourusername",
       continue: "Continue",
+      lineConnected: "✓ Connected with LINE: {name}",
       filmDeliveryTitle: "How will you send your film?",
       filmDeliveryDropOff: "Drop off at Marla Film Lab",
       filmDeliveryDropOffHelper: "Recommended",
@@ -50,7 +50,6 @@ export const customerCopy = {
       errors: {
         name: "Please add your full name.",
         phone: "Please add a phone number for updates.",
-        lineId: "Please add your LINE ID.",
         email: "Email is required to receive scanned images.",
         instagram: "Please enter your Instagram username."
       }
@@ -289,13 +288,13 @@ export const customerCopy = {
       subtitle: "ไม่ต้องสมัครสมาชิก เราใช้ข้อมูลนี้เพื่ออัปเดตออเดอร์ของคุณเท่านั้น",
       fullName: "ชื่อ-นามสกุล",
       phone: "เบอร์โทรศัพท์",
-      lineId: "LINE ID",
       email: "Email (สำหรับรับไฟล์สแกน)",
       emailPlaceholder: "your@email.com",
       allowSocialShare: "อนุญาตให้ร้านแชร์รูปภาพของคุณบนโซเชียลมีเดีย",
       instagramUsername: "Instagram Username (สำหรับเครดิตรูปภาพ)",
       instagramPlaceholder: "@yourusername",
       continue: "ดำเนินการต่อ",
+      lineConnected: "✓ เชื่อมต่อ LINE แล้ว: {name}",
       filmDeliveryTitle: "วิธีส่งฟิล์มมาที่ร้าน",
       filmDeliveryDropOff: "มาส่งด้วยตัวเองที่ร้าน",
       filmDeliveryDropOffHelper: "แนะนำให้มาส่งที่ร้าน",
@@ -307,7 +306,6 @@ export const customerCopy = {
       errors: {
         name: "กรุณากรอกชื่อ-นามสกุล",
         phone: "กรุณากรอกเบอร์โทรศัพท์",
-        lineId: "กรุณากรอก LINE ID",
         email: "กรุณากรอกอีเมลสำหรับรับไฟล์สแกน",
         instagram: "กรุณากรอก Instagram Username"
       }
