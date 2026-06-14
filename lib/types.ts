@@ -8,7 +8,12 @@ export type OrderStatus =
 
 export type FilmType = "Color (C-41)" | "B&W" | "ECN-2";
 export type FilmOrderFormat = "35MM" | "120MM";
-export type FilmServiceOption = "Dev + Scan (M)" | "Dev + Scan (XL)" | "Dev Only" | "Scan Only";
+export type FilmServiceOption =
+  | "Dev + Scan (M)"
+  | "Dev + Scan (XL)"
+  | "Dev Only"
+  | "Scan Only (M)"
+  | "Scan Only (XL)";
 export type BwDeveloper =
   | "Let us choose the best match (Recommended)"
   | "Ilfotech HC"

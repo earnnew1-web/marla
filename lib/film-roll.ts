@@ -1,5 +1,5 @@
 import { getRollBrandLabel, getRollStockLabel, isFilmBrand, type FilmBrand } from "@/lib/film-catalog";
-import { getServicePrice, priceRoll } from "@/lib/film-pricing";
+import { getServicePrice, isServiceAvailable, normalizeFilmService, priceRoll } from "@/lib/film-pricing";
 
 export { getRollBrandLabel, getRollStockLabel };
 import type {
@@ -103,12 +103,9 @@ function getDefaultService(
   format: FilmOrderFormat,
   current: FilmServiceOption
 ): FilmServiceOption {
-  try {
-    getServicePrice(filmType, format, current);
-    return current;
-  } catch {
-    return "Dev + Scan (M)";
-  }
+  const normalized = normalizeFilmService(current);
+  if (isServiceAvailable(filmType, format, normalized)) return normalized;
+  return "Dev + Scan (M)";
 }
 
 export type FilmRollValidationError = FilmRollFieldKey;
@@ -127,9 +124,10 @@ export function formatPushPullLabel(roll: Pick<FilmRoll, "pushPullEnabled" | "pu
   return `${roll.pushPullType === "Push (+)" ? "Push" : "Pull"} ${sign}${Math.abs(roll.pushPullStops)}`;
 }
 
-export function deriveScanSize(service: FilmServiceOption): string {
-  if (service === "Dev + Scan (M)") return "M";
-  if (service === "Dev + Scan (XL)") return "XL";
+export function deriveScanSize(service: FilmServiceOption | string): string {
+  const normalized = normalizeFilmService(service);
+  if (normalized === "Dev + Scan (M)" || normalized === "Scan Only (M)") return "M";
+  if (normalized === "Dev + Scan (XL)" || normalized === "Scan Only (XL)") return "XL";
   return "N/A";
 }
 
@@ -151,7 +149,7 @@ export function filmRollToDb(roll: FilmRoll) {
   return {
     format: roll.format,
     process: roll.filmType,
-    service: roll.service,
+    service: normalizeFilmService(roll.service),
     push_pull: formatPushPullLabel(roll),
     scan_size: deriveScanSize(roll.service),
     brand: roll.brand || null,
@@ -205,7 +203,7 @@ export function parseFilmRollFromDb(row: {
         details.stockOther ??
         (brand === "Other" ? details.stock ?? "" : details.stock === "Other" ? "" : ""),
       bwDeveloper: details.bwDeveloper ?? "Let us choose the best match (Recommended)",
-      service: row.service as FilmServiceOption,
+      service: normalizeFilmService(row.service),
       condition: details.condition ?? "Fresh",
       pushPullEnabled: details.pushPullEnabled ?? row.push_pull !== "Normal",
       pushPullExpanded: details.pushPullEnabled ?? row.push_pull !== "Normal",

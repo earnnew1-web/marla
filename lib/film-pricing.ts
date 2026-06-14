@@ -10,7 +10,8 @@ export const filmServiceOptions: FilmServiceOption[] = [
   "Dev + Scan (M)",
   "Dev + Scan (XL)",
   "Dev Only",
-  "Scan Only"
+  "Scan Only (M)",
+  "Scan Only (XL)"
 ];
 
 const PRICING_MATRIX: Record<FilmType, Record<FilmOrderFormat, Record<FilmServiceOption, number>>> = {
@@ -19,44 +20,67 @@ const PRICING_MATRIX: Record<FilmType, Record<FilmOrderFormat, Record<FilmServic
       "Dev + Scan (M)": 150,
       "Dev + Scan (XL)": 180,
       "Dev Only": 100,
-      "Scan Only": 80
+      "Scan Only (M)": 80,
+      "Scan Only (XL)": 110
     },
     "120MM": {
       "Dev + Scan (M)": 180,
-      "Dev + Scan (XL)": 210,
+      "Dev + Scan (XL)": 220,
       "Dev Only": 130,
-      "Scan Only": 110
+      "Scan Only (M)": 110,
+      "Scan Only (XL)": 150
     }
   },
   "B&W": {
     "35MM": {
-      "Dev + Scan (M)": 170,
-      "Dev + Scan (XL)": 200,
-      "Dev Only": 120,
-      "Scan Only": 100
-    },
-    "120MM": {
       "Dev + Scan (M)": 200,
       "Dev + Scan (XL)": 230,
-      "Dev Only": 150,
-      "Scan Only": 130
+      "Dev Only": 120,
+      "Scan Only (M)": 100,
+      "Scan Only (XL)": 130
+    },
+    "120MM": {
+      "Dev + Scan (M)": 220,
+      "Dev + Scan (XL)": 260,
+      "Dev Only": 170,
+      "Scan Only (M)": 130,
+      "Scan Only (XL)": 170
     }
   },
   "ECN-2": {
     "35MM": {
-      "Dev + Scan (M)": 170,
-      "Dev + Scan (XL)": 200,
-      "Dev Only": 120,
-      "Scan Only": 100
-    },
-    "120MM": {
       "Dev + Scan (M)": 200,
       "Dev + Scan (XL)": 230,
-      "Dev Only": 150,
-      "Scan Only": 130
+      "Dev Only": 120,
+      "Scan Only (M)": 100,
+      "Scan Only (XL)": 130
+    },
+    "120MM": {
+      "Dev + Scan (M)": 220,
+      "Dev + Scan (XL)": 260,
+      "Dev Only": 170,
+      "Scan Only (M)": 130,
+      "Scan Only (XL)": 170
     }
   }
 };
+
+/** Legacy DB / localStorage value → current service option. */
+export function normalizeFilmService(service: string): FilmServiceOption {
+  if (service === "Scan Only") return "Scan Only (M)";
+  if (filmServiceOptions.includes(service as FilmServiceOption)) {
+    return service as FilmServiceOption;
+  }
+  return "Dev + Scan (M)";
+}
+
+export function isServiceAvailable(
+  filmType: FilmType,
+  format: FilmOrderFormat,
+  service: FilmServiceOption
+): boolean {
+  return service in PRICING_MATRIX[filmType][format];
+}
 
 export type PriceLine = {
   label: string;
@@ -66,9 +90,10 @@ export type PriceLine = {
 export function getServicePrice(
   filmType: FilmType,
   format: FilmOrderFormat,
-  service: FilmServiceOption
+  service: FilmServiceOption | string
 ): number {
-  return PRICING_MATRIX[filmType][format][service];
+  const normalized = normalizeFilmService(service);
+  return PRICING_MATRIX[filmType][format][normalized];
 }
 
 export function getServiceOptionsWithPrices(
@@ -81,16 +106,22 @@ export function getServiceOptionsWithPrices(
   }));
 }
 
+export function serviceHasScanSize(service: FilmServiceOption | string): boolean {
+  const normalized = normalizeFilmService(service);
+  return normalized !== "Dev Only";
+}
+
 export function pushPullLineLabel(roll: Pick<FilmRoll, "pushPullType" | "pushPullStops">): string {
   const sign = roll.pushPullStops > 0 ? "+" : "";
   return `${roll.pushPullType === "Push (+)" ? "Push" : "Pull"} ${sign}${roll.pushPullStops}`;
 }
 
 export function getPriceBreakdown(roll: FilmRoll): { lines: PriceLine[]; total: number } {
+  const service = normalizeFilmService(roll.service);
   const lines: PriceLine[] = [
     {
-      label: roll.service,
-      amount: getServicePrice(roll.filmType, roll.format, roll.service)
+      label: service,
+      amount: getServicePrice(roll.filmType, roll.format, service)
     }
   ];
 

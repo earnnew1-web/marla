@@ -2,6 +2,7 @@ import {
   EXPERIMENTAL_FILM_FEE,
   getPriceBreakdown,
   getServicePrice,
+  normalizeFilmService,
   PUSH_PULL_FEE_PER_STOP,
   priceRollsTotal
 } from "@/lib/film-pricing";
@@ -67,7 +68,7 @@ export function getOrderPriceBreakdown(rolls: FilmRoll[], returnMethod: ReturnMe
   let filmageDiscount = 0;
 
   for (const roll of rolls) {
-    filmTotal += getServicePrice(roll.filmType, roll.format, roll.service);
+    filmTotal += getServicePrice(roll.filmType, roll.format, normalizeFilmService(roll.service));
 
     if (roll.pushPullEnabled) {
       pushPull += Math.abs(roll.pushPullStops) * PUSH_PULL_FEE_PER_STOP;

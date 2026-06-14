@@ -2,11 +2,11 @@ import { priceRoll as calculateRollPrice } from "@/lib/film-pricing";
 import type { FilmRoll, PricingSettings } from "@/lib/types";
 
 export const defaultPricing: PricingSettings = {
-  developOnly: 150,
-  developScanStandard: 250,
-  developScanXL: 350,
+  developOnly: 100,
+  developScanStandard: 150,
+  developScanXL: 180,
   tiffAddon: 150,
-  pushPullAddon: 50,
+  pushPullAddon: 100,
   deliveryFee: 60
 };
 
