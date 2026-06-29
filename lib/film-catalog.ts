@@ -26,6 +26,7 @@ export const FILM_STOCKS_BY_BRAND: Record<Exclude<FilmBrand, "Other">, readonly 
     "Portra 400",
     "Portra 800",
     "Ektar 100",
+    "Pro Image 100",
     "Vision3 250D",
     "Vision3 500T",
     "Tri-X 400",

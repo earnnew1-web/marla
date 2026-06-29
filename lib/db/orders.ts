@@ -4,7 +4,7 @@ import { formatOrderCode, nextOrderCodeSequence } from "@/lib/order-code";
 import { defaultPricing } from "@/lib/pricing";
 import { formatSupabaseError } from "@/lib/supabase/errors";
 import { createAdminSupabaseClient, createServerSupabaseClient } from "@/lib/supabase/server";
-import type { DraftOrder, Order, OrderStatus, PaymentStatus, PricingSettings } from "@/lib/types";
+import type { DraftOrder, FilmDeliveryMethod, Order, OrderStatus, PaymentStatus, PricingSettings } from "@/lib/types";
 import {
   buildCustomerRows,
   buildDashboardStats,
@@ -97,7 +97,8 @@ export async function createOrderInDb(draft: DraftOrder): Promise<Order> {
     totalPrice: payload.order.total_price,
     customerPhone: payload.customer.phone,
     lineUserId: payload.customer.line_user_id,
-    orderStatus: payload.order.status
+    orderStatus: payload.order.status,
+    filmDeliveryMethod: payload.order.film_delivery_method as FilmDeliveryMethod
   });
 
   return order;

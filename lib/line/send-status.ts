@@ -5,7 +5,7 @@ import { hasLineMessagingConfigured } from "@/lib/line/env";
 import { orderStatusToLineKey, parseLineStatusInput, resolveSubmitLineStatusKey, type LineStatusKey } from "@/lib/line/status";
 import { TABLES } from "@/lib/config/tables";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
-import type { OrderStatus } from "@/lib/types";
+import type { FilmDeliveryMethod, OrderStatus } from "@/lib/types";
 
 export type LineSendResult = {
   success: boolean;
@@ -21,6 +21,7 @@ type OrderNotificationRow = {
   total_price: number;
   status: string;
   scan_drive_url?: string | null;
+  film_delivery_method?: string | null;
   customer: {
     phone: string;
     line_user_id: string | null;
@@ -33,7 +34,7 @@ async function fetchOrderForLineNotification(orderId: string): Promise<OrderNoti
   const { data, error } = await supabase
     .from(TABLES.orders)
     .select(
-      `id, order_code, total_price, status, scan_drive_url, customer:${TABLES.customers}(phone, line_user_id, line_connected)`
+      `id, order_code, total_price, status, scan_drive_url, film_delivery_method, customer:${TABLES.customers}(phone, line_user_id, line_connected)`
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -48,6 +49,7 @@ async function fetchOrderForLineNotification(orderId: string): Promise<OrderNoti
     total_price: data.total_price,
     status: data.status,
     scan_drive_url: data.scan_drive_url ?? null,
+    film_delivery_method: data.film_delivery_method ?? null,
     customer: customer ?? null
   };
 }
@@ -96,7 +98,8 @@ async function sendFlexForOrder(
       totalPrice: row.total_price,
       customerPhone: row.customer?.phone ?? "",
       statusKey,
-      scanDriveUrl: row.scan_drive_url
+      scanDriveUrl: row.scan_drive_url,
+      filmDeliveryMethod: (row.film_delivery_method as FilmDeliveryMethod) ?? "drop_off"
     });
 
     await sendLinePushMessage(lineUserId, flexMessage);
@@ -189,6 +192,7 @@ type OrderReceivedContext = {
   customerPhone: string;
   lineUserId: string | null | undefined;
   orderStatus: OrderStatus;
+  filmDeliveryMethod?: FilmDeliveryMethod;
 };
 
 export async function sendLineOrderReceivedMessage(orderId: string) {
@@ -223,7 +227,8 @@ export async function sendLineOrderReceivedFromContext(context: OrderReceivedCon
       orderCode: context.orderCode,
       totalPrice: context.totalPrice,
       customerPhone: context.customerPhone,
-      statusKey
+      statusKey,
+      filmDeliveryMethod: context.filmDeliveryMethod ?? "drop_off"
     });
 
     await sendLinePushMessage(lineUserId, flexMessage);

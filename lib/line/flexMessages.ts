@@ -1,6 +1,13 @@
 import { getLineOaUrl, getSiteUrl } from "@/lib/line/env";
+import {
+  LAB_ADDRESS_COPY_TEXT,
+  LAB_ADDRESS_LINE,
+  LAB_NAME,
+  LAB_PHONE_DISPLAY
+} from "@/lib/lab-address";
 import { ORDER_PROGRESS_STEPS } from "@/lib/order-progress";
 import { LINE_STATUS_COPY, type LineStatusKey } from "@/lib/line/status";
+import type { FilmDeliveryMethod } from "@/lib/types";
 
 const BRAND = {
   ink: "#2B211C",
@@ -15,6 +22,7 @@ export type FlexOrderInput = {
   customerPhone: string;
   statusKey: LineStatusKey;
   scanDriveUrl?: string | null;
+  filmDeliveryMethod?: FilmDeliveryMethod;
 };
 
 function statusHeroImagePath(statusKey: LineStatusKey) {
@@ -63,9 +71,64 @@ function infoRow(label: string, value: string) {
   };
 }
 
+function parcelShippingSection() {
+  return [
+    {
+      type: "separator" as const,
+      margin: "lg" as const,
+      color: BRAND.border
+    },
+    {
+      type: "text" as const,
+      text: "Ship your film to",
+      size: "sm" as const,
+      weight: "bold" as const,
+      color: BRAND.ink,
+      margin: "md" as const
+    },
+    {
+      type: "text" as const,
+      text: LAB_NAME,
+      size: "sm" as const,
+      weight: "bold" as const,
+      color: BRAND.ink,
+      margin: "sm" as const,
+      wrap: true
+    },
+    {
+      type: "text" as const,
+      text: LAB_ADDRESS_LINE,
+      size: "sm" as const,
+      color: BRAND.ink,
+      margin: "sm" as const,
+      wrap: true
+    },
+    {
+      type: "text" as const,
+      text: LAB_PHONE_DISPLAY,
+      size: "sm" as const,
+      color: BRAND.muted,
+      margin: "sm" as const,
+      wrap: true
+    },
+    {
+      type: "button" as const,
+      style: "link" as const,
+      height: "sm" as const,
+      margin: "md" as const,
+      action: {
+        type: "clipboard" as const,
+        label: "Copy Address",
+        clipboardText: LAB_ADDRESS_COPY_TEXT
+      }
+    }
+  ];
+}
+
 export function buildOrderStatusFlex(order: FlexOrderInput) {
   const copy = LINE_STATUS_COPY[order.statusKey];
   const scanDriveUrl = order.scanDriveUrl?.trim();
+  const showParcelShipping = order.filmDeliveryMethod === "parcel";
   const footerButtons = [];
 
   if (scanDriveUrl && (order.statusKey === "ready" || order.statusKey === "completed")) {
@@ -129,6 +192,7 @@ export function buildOrderStatusFlex(order: FlexOrderInput) {
             wrap: true,
             margin: "md" as const
           },
+          ...(showParcelShipping ? parcelShippingSection() : []),
           {
             type: "separator" as const,
             margin: "lg" as const,
