@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CustomerInfoLineConnectCard } from "@/components/customer/CustomerInfoLineConnectCard";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
@@ -41,6 +41,22 @@ const emptyForm = (): CustomerForm => ({
 });
 
 export default function CustomerInfoPage() {
+  return (
+    <Suspense
+      fallback={
+        <CustomerLayout>
+          <div className="mx-auto max-w-2xl px-1 py-12 text-center">
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        </CustomerLayout>
+      }
+    >
+      <CustomerInfoContent />
+    </Suspense>
+  );
+}
+
+function CustomerInfoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useCustomerLanguage();

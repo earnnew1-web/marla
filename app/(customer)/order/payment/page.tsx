@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CashPaymentBlockedDialog } from "@/components/customer/CashPaymentBlockedDialog";
@@ -37,6 +37,24 @@ import type { CustomerDraft, DraftOrder, PaymentInfo, PaymentMethod, ReturnMetho
 import { cn } from "@/lib/utils";
 
 export default function PaymentPage() {
+  return (
+    <Suspense
+      fallback={
+        <CustomerLayout>
+          <OrderStepIndicator current={3}>
+            <Card className="border-0 bg-card shadow-none">
+              <CardContent className="p-8 text-center text-sm text-muted-foreground">Loading...</CardContent>
+            </Card>
+          </OrderStepIndicator>
+        </CustomerLayout>
+      }
+    >
+      <PaymentContent />
+    </Suspense>
+  );
+}
+
+function PaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useCustomerLanguage();
