@@ -29,7 +29,6 @@ import {
 } from "@/lib/film-roll";
 import {
   shouldShowFieldError,
-  VALIDATION_MESSAGE,
   type FilmRollFieldKey
 } from "@/lib/film-roll-validation";
 import { EXPERIMENTAL_FILM_FEE, getServiceOptionsWithPrices } from "@/lib/film-pricing";
@@ -562,6 +561,8 @@ function ValidationField({
   onBlur?: (event: React.FocusEvent<HTMLElement>) => void;
   children: React.ReactNode;
 }) {
+  const { t } = useCustomerLanguage();
+
   return (
     <div
       ref={fieldRef}
@@ -571,7 +572,7 @@ function ValidationField({
     >
       {label ? <Label className={sectionTitle}>{label}</Label> : null}
       {children}
-      {showError ? <p className="text-xs text-destructive/90">{VALIDATION_MESSAGE}</p> : null}
+      {showError ? <p className="text-xs text-destructive/90">{t.common.errors.required}</p> : null}
     </div>
   );
 }

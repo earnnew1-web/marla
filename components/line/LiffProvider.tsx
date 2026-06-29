@@ -102,6 +102,70 @@ export async function refreshLineProfile(): Promise<LineProfile | null> {
   }
 }
 
+/** Start LIFF login and return to the order confirmation page to finish linking. */
+export async function startLineConnectLogin(orderCode: string): Promise<LineProfile | null> {
+  const { getLineConnectRedirectUrl } = await import("@/lib/line/env");
+  const initialized = await ensureLiffInit();
+  if (!initialized) return null;
+
+  const redirectUri = getLineConnectRedirectUrl(orderCode);
+
+  if (!liff.isLoggedIn()) {
+    liff.login({ redirectUri });
+    return null;
+  }
+
+  return refreshLineProfile();
+}
+
+/** Start LIFF login and return to the order summary page to claim a welcome coupon. */
+export async function startSummaryLineConnect(): Promise<LineProfile | null> {
+  const { getSummaryLineConnectRedirectUrl } = await import("@/lib/line/env");
+  const initialized = await ensureLiffInit();
+  if (!initialized) return null;
+
+  const redirectUri = getSummaryLineConnectRedirectUrl();
+
+  if (!liff.isLoggedIn()) {
+    liff.login({ redirectUri });
+    return null;
+  }
+
+  return refreshLineProfile();
+}
+
+/** Start LIFF login and return to the payment page to claim a welcome coupon. */
+export async function startPaymentLineConnect(): Promise<LineProfile | null> {
+  const { getPaymentLineConnectRedirectUrl } = await import("@/lib/line/env");
+  const initialized = await ensureLiffInit();
+  if (!initialized) return null;
+
+  const redirectUri = getPaymentLineConnectRedirectUrl();
+
+  if (!liff.isLoggedIn()) {
+    liff.login({ redirectUri });
+    return null;
+  }
+
+  return refreshLineProfile();
+}
+
+/** Start LIFF login and return to customer info step. */
+export async function startCustomerInfoLineConnect(): Promise<LineProfile | null> {
+  const { getCustomerInfoLineConnectRedirectUrl } = await import("@/lib/line/env");
+  const initialized = await ensureLiffInit();
+  if (!initialized) return null;
+
+  const redirectUri = getCustomerInfoLineConnectRedirectUrl();
+
+  if (!liff.isLoggedIn()) {
+    liff.login({ redirectUri });
+    return null;
+  }
+
+  return refreshLineProfile();
+}
+
 export function LiffProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [inLine, setInLine] = useState(false);

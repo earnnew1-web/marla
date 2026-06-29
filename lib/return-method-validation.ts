@@ -1,7 +1,4 @@
 import type { ReturnMethod, ReturnShippingInfo } from "@/lib/types";
-import { VALIDATION_MESSAGE } from "@/lib/film-roll-validation";
-
-export { VALIDATION_MESSAGE };
 
 export type ReturnMethodFieldKey = "recipientName" | "phone" | "address";
 

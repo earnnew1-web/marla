@@ -114,7 +114,9 @@ export type Order = {
   totalPrice: number;
   filmTotal?: number;
   shippingFee?: number;
+  discountCode?: string | null;
   discountAmount?: number;
+  finalPrice?: number;
   createdAt: string;
   updatedAt?: string;
   filmDeliveryMethod?: FilmDeliveryMethod;
@@ -130,6 +132,38 @@ export type DraftOrder = {
   delivery?: DeliveryInfo;
   payment?: PaymentInfo;
   filmDeliveryMethod?: FilmDeliveryMethod;
+  discountCode?: string;
+};
+
+export type DiscountCode = {
+  id: string;
+  code: string;
+  type: string;
+  discountType: string;
+  discountValue: number;
+  usageLimit: number;
+  usedCount: number;
+  active: boolean;
+  createdAt: string;
+  expiresAt?: string | null;
+  source?: "discount_code" | "customer_coupon";
+};
+
+export type CustomerCoupon = {
+  id: string;
+  code: string;
+  customerId?: string | null;
+  lineUserId?: string | null;
+  discountType: string;
+  discountValue: number;
+  appliesTo: string;
+  usageLimit: number;
+  usedCount: number;
+  isUsed: boolean;
+  active: boolean;
+  expiresAt: string;
+  usedAt?: string | null;
+  createdAt: string;
 };
 
 export type PricingSettings = {
@@ -153,9 +187,13 @@ export type AdminCustomerRow = {
   name: string;
   phone: string;
   lineId: string;
+  lineUserId?: string | null;
   lineDisplayName?: string | null;
   lineConnected?: boolean;
   email: string;
   orderCount: number;
   lastOrderAt: string;
+  welcomeCouponCode?: string | null;
+  welcomeCouponExpiresAt?: string | null;
+  welcomeCouponStatus?: string | null;
 };

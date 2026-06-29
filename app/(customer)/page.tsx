@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { HeroBounceCards } from "@/components/customer/HeroBounceCards";
+import { StartOrderCta } from "@/components/customer/StartOrderCta";
 import { Button } from "@/components/ui/button";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { heroHeadline, heroSubtext } from "@/lib/typography";
@@ -37,9 +38,7 @@ export default function HomePage() {
             <p className={heroSubtext}>{t.home.subtext}</p>
           </div>
           <div className="flex w-full flex-col gap-4">
-            <Button asChild size="lg" className="min-h-16 w-full text-base">
-              <Link href="/order">{t.home.startOrder}</Link>
-            </Button>
+            <StartOrderCta />
             <Button asChild variant="outline" size="lg" className="min-h-16 w-full text-base">
               <Link href="/track-order">{t.home.trackOrder}</Link>
             </Button>

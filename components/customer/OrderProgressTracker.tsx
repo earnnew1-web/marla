@@ -17,14 +17,22 @@ import "./OrderProgressTracker.css";
 type Props = {
   status: OrderStatus | string;
   className?: string;
+  variant?: "default" | "compact";
 };
 
-export function OrderProgressTracker({ status, className }: Props) {
+export function OrderProgressTracker({ status, className, variant = "default" }: Props) {
   const { t } = useCustomerLanguage();
   const activeIndex = getProgressActiveIndex(status);
+  const compact = variant === "compact";
 
   return (
-    <div className={cn("order-progress-track w-full px-2 pb-2 pt-4", className)}>
+    <div
+      className={cn(
+        "order-progress-track w-full px-1 pb-1 pt-2",
+        compact && "order-progress-track--compact",
+        className
+      )}
+    >
       <div className="order-progress-row mx-auto flex min-w-[min(100%,700px)] max-w-3xl justify-between overflow-visible">
         {ORDER_PROGRESS_STEPS.map((step, index) => {
           const stepState = getStepState(index, activeIndex);
@@ -38,7 +46,8 @@ export function OrderProgressTracker({ status, className }: Props) {
                 <div
                   className={cn(
                     "order-progress-thumb",
-                    stepState === "future" && "opacity-[0.35] saturate-[0.8]"
+                    compact && stepState !== "active" && "opacity-[0.28] saturate-[0.65]",
+                    !compact && stepState === "future" && "opacity-[0.35] saturate-[0.8]"
                   )}
                 >
                   <div
@@ -52,8 +61,8 @@ export function OrderProgressTracker({ status, className }: Props) {
                       <Image
                         src={step.image}
                         alt={label}
-                        width={120}
-                        height={120}
+                        width={80}
+                        height={80}
                         className="h-full w-full object-cover"
                       />
                     </div>
@@ -61,10 +70,11 @@ export function OrderProgressTracker({ status, className }: Props) {
                 </div>
                 <p
                   className={cn(
-                    "order-progress-label text-[10px] sm:text-xs",
+                    "order-progress-label text-[10px] sm:text-[11px]",
                     stepState === "active" && "font-bold text-[#D3322B]",
-                    stepState === "completed" && "font-medium text-foreground/85",
-                    stepState === "future" && "font-normal text-muted-foreground/70"
+                    !compact && stepState === "completed" && "font-medium text-foreground/85",
+                    !compact && stepState === "future" && "font-normal text-muted-foreground/70",
+                    compact && stepState !== "active" && "font-normal text-muted-foreground/55"
                   )}
                 >
                   {label}
@@ -73,7 +83,7 @@ export function OrderProgressTracker({ status, className }: Props) {
 
               {connectorState ? (
                 <div
-                  className="order-progress-connector-wrap w-[clamp(10px,6vw,40px)] px-0.5"
+                  className="order-progress-connector-wrap w-[clamp(8px,4vw,28px)] px-0.5"
                   aria-hidden
                 >
                   <div

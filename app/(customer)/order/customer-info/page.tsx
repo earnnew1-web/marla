@@ -1,8 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { CustomerInfoLineConnectCard } from "@/components/customer/CustomerInfoLineConnectCard";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
 import { FilmDeliveryMethodSection } from "@/components/customer/FilmDeliveryMethodSection";
 import { LineDebugPanel } from "@/components/line/LineDebugPanel";
@@ -18,7 +19,7 @@ import { DEFAULT_FILM_DELIVERY_METHOD } from "@/lib/film-delivery";
 import { applyLineProfileToCustomer, resolveLineProfile } from "@/lib/line/customer-fields";
 import { pageTitle, stepEyebrow } from "@/lib/typography";
 import { loadDraft, saveDraft } from "@/lib/storage";
-import type { FilmDeliveryMethod } from "@/lib/types";
+import type { CustomerDraft, FilmDeliveryMethod } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type CustomerForm = {
@@ -41,9 +42,11 @@ const emptyForm = (): CustomerForm => ({
 
 export default function CustomerInfoPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useCustomerLanguage();
-  const { inLine, profile } = useLiff();
+  const { inLine, profile, ready: liffReady } = useLiff();
   const [form, setForm] = useState<CustomerForm>(emptyForm);
+  const [customerDraft, setCustomerDraft] = useState<CustomerDraft | null>(null);
   const [filmDeliveryMethod, setFilmDeliveryMethod] = useState<FilmDeliveryMethod>(DEFAULT_FILM_DELIVERY_METHOD);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -51,30 +54,56 @@ export default function CustomerInfoPage() {
   useEffect(() => {
     const draft = loadDraft();
     setFilmDeliveryMethod(draft.filmDeliveryMethod ?? DEFAULT_FILM_DELIVERY_METHOD);
-    if (!draft.customer) return;
-
-    setForm({
-      name: draft.customer.name,
-      phone: draft.customer.phone,
-      lineId: draft.customer.lineId ?? "",
-      email: draft.customer.email ?? "",
-      allowSocialShare: draft.customer.allowSocialShare ?? false,
-      instagramUsername: draft.customer.instagramUsername ?? ""
-    });
+    if (draft.customer) {
+      setCustomerDraft(draft.customer);
+      setForm({
+        name: draft.customer.name,
+        phone: draft.customer.phone,
+        lineId: draft.customer.lineId ?? "",
+        email: draft.customer.email ?? "",
+        allowSocialShare: draft.customer.allowSocialShare ?? false,
+        instagramUsername: draft.customer.instagramUsername ?? ""
+      });
+    }
   }, []);
 
   useEffect(() => {
     if (!profile?.userId) return;
 
     const draft = loadDraft();
+    const nextCustomer = applyLineProfileToCustomer(
+      draft.customer ?? { name: "", phone: "", email: "" },
+      profile
+    );
     saveDraft({
       ...draft,
-      customer: applyLineProfileToCustomer(
-        draft.customer ?? { name: "", phone: "", email: "" },
-        profile
-      )
+      customer: nextCustomer
     });
+    setCustomerDraft(nextCustomer);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("mfl:skip-line-connect-step1");
+    }
   }, [profile]);
+
+  useEffect(() => {
+    if (!liffReady || searchParams.get("connectLine") !== "1") return;
+
+    void (async () => {
+      const activeProfile = profile ?? (await refreshLineProfile());
+      if (!activeProfile?.userId) return;
+
+      const draft = loadDraft();
+      const nextCustomer = applyLineProfileToCustomer(
+        draft.customer ?? { name: "", phone: "", email: "" },
+        activeProfile
+      );
+      saveDraft({ ...draft, customer: nextCustomer });
+      setCustomerDraft(nextCustomer);
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("mfl:skip-line-connect-step1");
+      }
+    })();
+  }, [liffReady, profile, searchParams]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -139,6 +168,19 @@ export default function CustomerInfoPage() {
               <p className="mt-2 font-normal text-muted-foreground">{t.customerInfo.subtitle}</p>
             </CardHeader>
             <CardContent className="space-y-4 p-5 pt-0 sm:px-7 sm:pb-7">
+            <CustomerInfoLineConnectCard
+              customer={customerDraft}
+              onCustomerChange={(customer) => {
+                setCustomerDraft(customer);
+                setForm((current) => ({
+                  ...current,
+                  name: customer.name || current.name,
+                  phone: customer.phone || current.phone,
+                  lineId: customer.lineId ?? current.lineId,
+                  email: customer.email ?? current.email
+                }));
+              }}
+            />
             <LineDebugPanel />
             <TextField
               id="customer-name"

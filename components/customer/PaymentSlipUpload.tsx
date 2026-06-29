@@ -12,7 +12,6 @@ import {
 } from "@/components/customer/filmFlowStyles";
 import { PAYMENT_SLIP_ACCEPT } from "@/lib/payment";
 import { compressPaymentSlipFile } from "@/lib/payment-slip";
-import { VALIDATION_MESSAGE } from "@/lib/film-roll-validation";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +32,7 @@ export function PaymentSlipUpload({
   onRemove,
   onInteract
 }: Props) {
-  const { t } = useCustomerLanguage();
+  const { t, language } = useCustomerLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [processing, setProcessing] = useState(false);
 
@@ -110,7 +109,11 @@ export function PaymentSlipUpload({
           </button>
         )}
 
-        {showError ? <p className="text-xs text-destructive/90">{VALIDATION_MESSAGE}</p> : null}
+        {showError ? (
+          <p className="text-xs font-medium text-destructive/90" lang={language}>
+            {t.payment.slipRequired}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

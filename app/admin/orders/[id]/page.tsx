@@ -369,8 +369,16 @@ export default function AdminOrderDetailPage() {
               ))}
               {typeof order.filmTotal === "number" ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span>Film total</span>
-                  <span className="font-semibold">{money(order.filmTotal)}</span>
+                  <span>Subtotal</span>
+                  <span className="font-semibold">
+                    {money((order.filmTotal ?? 0) + (order.shippingFee ?? 0))}
+                  </span>
+                </div>
+              ) : null}
+              {order.discountCode ? (
+                <div className="flex items-center justify-between text-sm">
+                  <span>{order.discountCode.startsWith("MARLA-") ? "Welcome coupon" : "Discount code"}</span>
+                  <span className="font-semibold">{order.discountCode}</span>
                 </div>
               ) : null}
               {typeof order.discountAmount === "number" && order.discountAmount > 0 ? (
@@ -386,8 +394,8 @@ export default function AdminOrderDetailPage() {
                 </div>
               ) : null}
               <div className="flex items-center justify-between border-t pt-3">
-                <span className="font-bold">Total</span>
-                <span className="text-2xl font-bold">{money(order.totalPrice)}</span>
+                <span className="font-bold">Final total</span>
+                <span className="text-2xl font-bold">{money(order.finalPrice ?? order.totalPrice)}</span>
               </div>
             </CardContent>
           </Card>

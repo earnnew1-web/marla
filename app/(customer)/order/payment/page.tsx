@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CashPaymentBlockedDialog } from "@/components/customer/CashPaymentBlockedDialog";
@@ -12,8 +12,15 @@ import { PaymentDetailsCard } from "@/components/customer/PaymentDetailsCard";
 import { PaymentMethodSection } from "@/components/customer/PaymentMethodSection";
 import { PaymentSlipUpload } from "@/components/customer/PaymentSlipUpload";
 import { PaymentTotalSummary } from "@/components/customer/PaymentTotalSummary";
+import { WelcomeGiftCard } from "@/components/customer/WelcomeGiftCard";
+import type { AppliedDiscount } from "@/components/customer/DiscountCodeField";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { getStoredLineProfile, refreshLineProfile } from "@/components/line/LiffProvider";
+import {
+  getStoredLineProfile,
+  refreshLineProfile,
+  startPaymentLineConnect,
+  useLiff
+} from "@/components/line/LiffProvider";
 import {
   applyLineProfileToCustomer,
   buildLineSubmitPayload,
@@ -24,13 +31,16 @@ import { isCashPaymentBlocked, resolvePaymentMethod } from "@/lib/payment";
 import { loadReturnMethodState } from "@/lib/return-method";
 import { pageTitle, stepEyebrow } from "@/lib/typography";
 import { loadDraft, saveDraft, clearDraft } from "@/lib/storage";
-import { submitOrder } from "@/lib/customer/api";
-import type { DraftOrder, PaymentInfo, PaymentMethod, ReturnMethod } from "@/lib/types";
+import { isWelcomeCouponCode, WELCOME_COUPON_DISCOUNT_VALUE } from "@/lib/customer-coupons";
+import { fetchWelcomeCoupon, fetchWelcomePromoEligibility, submitOrder, validateDiscountCode } from "@/lib/customer/api";
+import type { CustomerDraft, DraftOrder, PaymentInfo, PaymentMethod, ReturnMethod } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function PaymentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useCustomerLanguage();
+  const { liffIdConfigured, ready: liffReady } = useLiff();
   const [draft, setDraft] = useState<DraftOrder | null>(null);
   const [returnMethod, setReturnMethod] = useState<ReturnMethod>("pickup");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("bank_transfer");
@@ -40,6 +50,84 @@ export default function PaymentPage() {
   const [slipTouched, setSlipTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [cashBlockedOpen, setCashBlockedOpen] = useState(false);
+  const [welcomeDiscount, setWelcomeDiscount] = useState<AppliedDiscount | null>(null);
+  const [manualDiscount, setManualDiscount] = useState<AppliedDiscount | null>(null);
+  const [promoEligible, setPromoEligible] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const [discountsReady, setDiscountsReady] = useState(false);
+
+  const lineConnected = Boolean(draft?.customer?.lineConnected && draft?.customer?.lineUserId);
+  const welcomeActive =
+    Boolean(welcomeDiscount) || (discountsReady && lineConnected && promoEligible);
+  const welcomeForSummary: AppliedDiscount | null =
+    welcomeDiscount ??
+    (welcomeActive ? { code: "WELCOME-GIFT", amount: WELCOME_COUPON_DISCOUNT_VALUE } : null);
+  const pricingDiscount = welcomeForSummary ?? manualDiscount;
+  const showWelcomeClaim = promoEligible && !welcomeActive && liffIdConfigured && !lineConnected;
+
+  const resolveDiscountForSubmit = useCallback(
+    async (customer: CustomerDraft) => {
+      if (welcomeDiscount) return welcomeDiscount;
+      if (manualDiscount) return manualDiscount;
+      if (!lineConnected || !promoEligible || !customer.lineUserId) return null;
+
+      const welcome = await fetchWelcomeCoupon({
+        lineUserId: customer.lineUserId,
+        phone: customer.phone,
+        email: customer.email,
+        ensure: true
+      });
+
+      if (welcome.valid) {
+        return { code: welcome.code, amount: welcome.discountValue };
+      }
+
+      return null;
+    },
+    [lineConnected, manualDiscount, promoEligible, welcomeDiscount]
+  );
+
+  const refreshDiscounts = useCallback(async (customer: CustomerDraft | undefined) => {
+    if (!customer) {
+      setWelcomeDiscount(null);
+      setPromoEligible(false);
+      setDiscountsReady(true);
+      return;
+    }
+
+    try {
+      const eligibility = await fetchWelcomePromoEligibility({
+        lineUserId: customer.lineUserId,
+        phone: customer.phone,
+        email: customer.email
+      });
+      setPromoEligible(eligibility.eligible);
+
+      if (customer.lineUserId) {
+        const welcome = await fetchWelcomeCoupon({
+          lineUserId: customer.lineUserId,
+          phone: customer.phone,
+          email: customer.email,
+          ensure: true
+        });
+
+        if (welcome.valid) {
+          setWelcomeDiscount({ code: welcome.code, amount: welcome.discountValue });
+          setManualDiscount(null);
+        } else {
+          setWelcomeDiscount(null);
+        }
+      } else {
+        setWelcomeDiscount(null);
+      }
+    } catch (error) {
+      console.error("[PaymentPage] refreshDiscounts failed", error);
+      setWelcomeDiscount(null);
+    } finally {
+      setDiscountsReady(true);
+    }
+  }, []);
 
   useEffect(() => {
     const loaded = loadDraft();
@@ -58,13 +146,66 @@ export default function PaymentPage() {
 
     const { returnMethod: method } = loadReturnMethodState(loaded);
     const resolvedMethod = resolvePaymentMethod(method, loaded.payment?.method);
+    const lineProfile = resolveLineProfile(getStoredLineProfile(), loaded.customer);
+    const customerWithLine = lineProfile
+      ? applyLineProfileToCustomer(loaded.customer, lineProfile)
+      : loaded.customer;
 
-    setDraft(loaded);
+    setDraft({ ...loaded, customer: customerWithLine });
     setReturnMethod(method);
     setPaymentMethod(resolvedMethod);
     setPaymentSlipDataUrl(loaded.payment?.paymentSlipDataUrl);
     setPaymentSlipFileName(loaded.payment?.paymentSlipFileName);
-  }, [router]);
+
+    void refreshDiscounts(customerWithLine);
+
+    if (loaded.discountCode?.trim() && customerWithLine && !isWelcomeCouponCode(loaded.discountCode)) {
+      void validateDiscountCode({
+        code: loaded.discountCode,
+        lineUserId: customerWithLine.lineUserId,
+        phone: customerWithLine.phone,
+        email: customerWithLine.email
+      }).then((result) => {
+        if (result.valid && result.code && result.discountValue) {
+          setManualDiscount({ code: result.code, amount: result.discountValue });
+        }
+      });
+    }
+  }, [router, refreshDiscounts]);
+
+  const handlePaymentLineConnect = useCallback(async () => {
+    setConnecting(true);
+    setConnectError(null);
+
+    try {
+      const profile = await startPaymentLineConnect();
+      if (!profile) return;
+
+      setDraft((current) => {
+        if (!current?.customer) return current;
+        const customer = applyLineProfileToCustomer(current.customer, profile);
+        const nextDraft = { ...current, customer };
+        saveDraft(nextDraft);
+        void refreshDiscounts(customer);
+        return nextDraft;
+      });
+    } catch (error) {
+      console.error("[PaymentPage] LINE connect failed", error);
+      setConnectError(t.payment.connectLineFailed);
+    } finally {
+      setConnecting(false);
+    }
+  }, [refreshDiscounts, t.payment.connectLineFailed]);
+
+  useEffect(() => {
+    if (!liffReady || searchParams.get("connectLine") !== "1" || !draft?.customer) return;
+    if (draft.customer.lineConnected && draft.customer.lineUserId) {
+      void refreshDiscounts(draft.customer);
+      return;
+    }
+
+    void handlePaymentLineConnect();
+  }, [draft?.customer, handlePaymentLineConnect, liffReady, refreshDiscounts, searchParams]);
 
   const showSlipError =
     paymentMethod === "bank_transfer" &&
@@ -103,7 +244,14 @@ export default function PaymentPage() {
 
     console.log("[Submit] line payload", customer ? buildLineSubmitPayload(customer) : null);
 
-    const nextDraft: DraftOrder = { ...draft, customer, payment };
+    const resolvedDiscount = customer ? await resolveDiscountForSubmit(customer) : null;
+
+    const nextDraft: DraftOrder = {
+      ...draft,
+      customer,
+      payment,
+      discountCode: resolvedDiscount?.code
+    };
     saveDraft(nextDraft);
     setSubmitting(true);
 
@@ -136,11 +284,11 @@ export default function PaymentPage() {
         : {})
     };
 
-    saveDraft({ ...draft, payment });
+    saveDraft({ ...draft, payment, discountCode: welcomeDiscount?.code ?? manualDiscount?.code });
     router.push("/order/film-rolls");
   };
 
-  if (!draft) {
+  if (!draft || !discountsReady) {
     return (
       <CustomerLayout>
         <OrderStepIndicator current={3}>
@@ -161,8 +309,23 @@ export default function PaymentPage() {
             <h1 className={cn("mt-2", pageTitle)}>{t.payment.title}</h1>
             <p className="mt-2 text-muted-foreground">{t.payment.subtitle}</p>
           </CardHeader>
-          <CardContent className="space-y-4 p-5 pt-0 sm:px-7 sm:pb-7">
-            <PaymentTotalSummary rolls={draft.rolls} returnMethod={returnMethod} />
+          <CardContent className="space-y-8 p-5 pt-0 sm:px-7 sm:pb-7">
+            <WelcomeGiftCard
+              applied={welcomeActive}
+              showClaim={showWelcomeClaim}
+              connecting={connecting}
+              connectError={connectError}
+              onConnectLine={() => void handlePaymentLineConnect()}
+            />
+
+            <PaymentTotalSummary
+              rolls={draft.rolls}
+              returnMethod={returnMethod}
+              customer={draft.customer}
+              welcomeDiscount={welcomeForSummary}
+              manualDiscount={manualDiscount}
+              onManualDiscountChange={setManualDiscount}
+            />
 
             <PaymentMethodSection
               paymentMethod={paymentMethod}

@@ -11,7 +11,17 @@ export function normalizeStatus(status: OrderStatus | string): OrderStatus {
   return normalizeStatusValue(status);
 }
 
-export function StatusTimeline({ status }: { status: OrderStatus | string }) {
+type StatusTimelineProps = {
+  status: OrderStatus | string;
+  variant?: "default" | "compact";
+  showAutoUpdateCaption?: boolean;
+};
+
+export function StatusTimeline({
+  status,
+  variant = "default",
+  showAutoUpdateCaption = false
+}: StatusTimelineProps) {
   const { t } = useCustomerLanguage();
   const normalized = normalizeStatus(status);
 
@@ -19,7 +29,10 @@ export function StatusTimeline({ status }: { status: OrderStatus | string }) {
     return (
       <div className="space-y-4">
         <PaymentStatusBanner compact />
-        <OrderProgressTracker status="Received" />
+        <OrderProgressTracker status="Received" variant={variant} />
+        {showAutoUpdateCaption ? (
+          <p className="text-center text-xs text-muted-foreground">{t.confirmation.statusAutoUpdate}</p>
+        ) : null}
       </div>
     );
   }
@@ -32,5 +45,12 @@ export function StatusTimeline({ status }: { status: OrderStatus | string }) {
     );
   }
 
-  return <OrderProgressTracker status={normalized} />;
+  return (
+    <div className="space-y-3">
+      <OrderProgressTracker status={normalized} variant={variant} />
+      {showAutoUpdateCaption ? (
+        <p className="text-center text-xs text-muted-foreground">{t.confirmation.statusAutoUpdate}</p>
+      ) : null}
+    </div>
+  );
 }

@@ -3,28 +3,26 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
+import { LineConnectCard } from "@/components/customer/LineConnectCard";
 import { ScanDriveLinkCard } from "@/components/customer/ScanDriveLinkCard";
-import { StatusTimeline } from "@/components/customer/StatusTimeline";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { fetchOrderByCode } from "@/lib/customer/api";
 import { useOrderStatusRealtime } from "@/lib/customer/useOrderStatusRealtime";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
-import { orderCode, pageTitleLarge, stepEyebrow } from "@/lib/typography";
+import { successMessage } from "@/lib/typography";
 import { getLastOrderCode } from "@/lib/storage";
 import type { Order } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 export default function ConfirmationPage() {
   return (
     <Suspense
       fallback={
         <CustomerLayout>
-          <Card className="mx-auto max-w-3xl p-8 text-center shadow-soft">
+          <div className="mx-auto max-w-lg px-1 py-12 text-center">
             <p className="text-sm text-muted-foreground">Loading...</p>
-          </Card>
+          </div>
         </CustomerLayout>
       }
     >
@@ -38,7 +36,6 @@ function ConfirmationContent() {
   const { t } = useCustomerLanguage();
   const [code, setCode] = useState("");
   const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useOrderStatusRealtime(order?.id, (update) => {
     setOrder((current) =>
@@ -54,11 +51,9 @@ function ConfirmationContent() {
 
   const loadLatestOrder = useCallback(async (orderCodeValue: string) => {
     if (!orderCodeValue.trim()) {
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
     try {
       const { order: found } = await fetchOrderByCode(orderCodeValue);
       if (found) {
@@ -66,53 +61,52 @@ function ConfirmationContent() {
       }
     } catch (error) {
       console.error(error);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const orderCode = searchParams.get("code") ?? getLastOrderCode() ?? "";
-    setCode(orderCode);
-    void loadLatestOrder(orderCode);
+    const orderCodeParam = searchParams.get("code") ?? getLastOrderCode() ?? "";
+    setCode(orderCodeParam);
+    void loadLatestOrder(orderCodeParam);
   }, [searchParams, loadLatestOrder]);
+
+  const lineConnected = Boolean(order?.customer.lineConnected && order?.customer.lineUserId);
 
   return (
     <CustomerLayout>
-      <Card className="mx-auto max-w-3xl overflow-visible text-center shadow-soft">
-        <CardHeader className="p-5 sm:p-8">
-          <p className={stepEyebrow}>{t.confirmation.submitted}</p>
-          <h1 className={cn("mt-2", pageTitleLarge)}>{t.confirmation.title}</h1>
-          <p className="mt-4 text-lg font-normal text-muted-foreground">{t.confirmation.subtitle}</p>
-        </CardHeader>
-        <CardContent className="space-y-6 overflow-visible p-5 pt-0 sm:px-8 sm:pb-8">
-          <div className="mx-auto max-w-sm rounded-lg border border-dashed border-border bg-muted/50 p-5">
-            <p className="text-sm font-semibold text-muted-foreground">{t.confirmation.orderCode}</p>
-            <p className={cn("mt-2 text-4xl", orderCode)}>{code || "—"}</p>
+      <div className="mx-auto flex w-full max-w-lg flex-col gap-10 px-1 py-8 sm:gap-12 sm:py-10">
+        <section className="space-y-5 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+            <CheckCircle2 size={34} strokeWidth={2} />
           </div>
+          <div className="space-y-3">
+            <h1 className={successMessage}>{t.confirmation.title}</h1>
+            <div className="space-y-1 text-base leading-relaxed text-muted-foreground">
+              <p>{t.confirmation.descriptionLine1}</p>
+              <p>{t.confirmation.descriptionLine2}</p>
+            </div>
+          </div>
+        </section>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mx-auto flex h-10 gap-2 border-border/80 px-4 text-sm font-semibold"
-            onClick={() => loadLatestOrder(code)}
-            disabled={loading || !code}
-          >
-            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-            {loading ? t.confirmation.refreshing : t.confirmation.refresh}
+        {code ? (
+          <section className="space-y-4">
+            <LineConnectCard
+              orderCode={code}
+              lineConnected={lineConnected}
+              status={order?.status ?? "Received"}
+              showAutoUpdateCaption
+              onLinked={(updatedOrder) => setOrder(updatedOrder)}
+            />
+            {order ? <ScanDriveLinkCard order={order} /> : null}
+          </section>
+        ) : null}
+
+        <section className="pt-1">
+          <Button asChild variant="ghost" className="h-11 w-full text-base font-medium text-muted-foreground">
+            <Link href="/">{t.confirmation.backHome}</Link>
           </Button>
-
-          <StatusTimeline status={order?.status ?? "Received"} />
-          {order ? <ScanDriveLinkCard order={order} /> : null}
-
-          <div className="flex justify-center pt-2">
-            <Button asChild variant="outline" className="h-11 min-w-[10rem]">
-              <Link href="/">{t.confirmation.backHome}</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </section>
+      </div>
     </CustomerLayout>
   );
 }

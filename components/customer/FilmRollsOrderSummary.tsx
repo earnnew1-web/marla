@@ -10,6 +10,7 @@ import {
   filmFlowInset
 } from "@/components/customer/filmFlowStyles";
 import { bahtSpaced } from "@/lib/format";
+import { isWelcomeCouponCode } from "@/lib/customer-coupons";
 import { getStep2OrderSummary } from "@/lib/order-pricing";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { sectionTitle } from "@/lib/typography";
@@ -19,6 +20,8 @@ import { cn } from "@/lib/utils";
 type Props = {
   rolls: FilmRoll[];
   returnMethod: ReturnMethod;
+  appliedDiscount?: { code: string; amount: number } | null;
+  showWelcomeGiftBreakdown?: boolean;
 };
 
 function filmTypeLabel(filmType: FilmType, t: ReturnType<typeof useCustomerLanguage>["t"]) {
@@ -39,9 +42,23 @@ function lineLabel(label: string, t: ReturnType<typeof useCustomerLanguage>["t"]
   return label;
 }
 
-export function FilmRollsOrderSummary({ rolls, returnMethod }: Props) {
+export function FilmRollsOrderSummary({
+  rolls,
+  returnMethod,
+  appliedDiscount = null,
+  showWelcomeGiftBreakdown = false
+}: Props) {
   const { t } = useCustomerLanguage();
   const summary = getStep2OrderSummary(rolls, returnMethod);
+  const welcomeGiftApplied =
+    showWelcomeGiftBreakdown &&
+    appliedDiscount &&
+    appliedDiscount.amount > 0 &&
+    isWelcomeCouponCode(appliedDiscount.code);
+  const subtotal = summary.estimatedTotal;
+  const finalTotal = welcomeGiftApplied
+    ? Math.max(0, subtotal - appliedDiscount.amount)
+    : subtotal;
 
   return (
     <Card className={filmFlowCard}>
@@ -89,9 +106,23 @@ export function FilmRollsOrderSummary({ rolls, returnMethod }: Props) {
               <span className="font-medium tabular-nums">{bahtSpaced(summary.filmageDiscount)}</span>
             </div>
           ) : null}
+          {welcomeGiftApplied ? (
+            <>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-foreground/85">{t.summary.subtotal}</span>
+                <span className="font-medium tabular-nums">{bahtSpaced(subtotal)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-foreground/85">{t.summary.welcomeGiftLine}</span>
+                <span className="font-medium tabular-nums text-emerald-700">
+                  {bahtSpaced(-appliedDiscount.amount)}
+                </span>
+              </div>
+            </>
+          ) : null}
           <div className={cn("flex items-center justify-between border-t pt-3", filmFlowDivider)}>
-            <span className={sectionTitle}>{t.filmRolls.estimatedTotal}</span>
-            <span className="text-xl font-bold tabular-nums text-foreground">{bahtSpaced(summary.estimatedTotal)}</span>
+            <span className={sectionTitle}>{welcomeGiftApplied ? t.summary.total : t.filmRolls.estimatedTotal}</span>
+            <span className="text-xl font-bold tabular-nums text-foreground">{bahtSpaced(finalTotal)}</span>
           </div>
         </div>
       </CardContent>

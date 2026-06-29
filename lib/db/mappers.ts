@@ -1,6 +1,5 @@
 import { parseFilmRollFromDb, filmRollToDb } from "@/lib/film-roll";
 import { defaultPricing, priceRoll } from "@/lib/pricing";
-import { getTotalFilmageDiscount } from "@/lib/order-pricing";
 import {
   ACCOUNT_NAME_EN,
   ACCOUNT_NUMBER_COPY,
@@ -55,6 +54,8 @@ export function getOrderSelect() {
     "film_total",
     "shipping_fee",
     "discount_amount",
+    "discount_code",
+    "final_price",
     "total_price",
     "created_at",
     "updated_at",
@@ -129,6 +130,8 @@ export type DbOrderRow = {
   film_total?: number | null;
   shipping_fee?: number | null;
   discount_amount?: number | null;
+  discount_code?: string | null;
+  final_price?: number | null;
   total_price: number;
   created_at: string;
   updated_at?: string | null;
@@ -208,10 +211,12 @@ export function mapOrder(row: DbOrderRow): Order {
     delivery,
     payment,
     status: normalizeStatus(row.status),
-    totalPrice: row.total_price,
+    totalPrice: row.final_price ?? row.total_price,
     filmTotal: row.film_total ?? undefined,
     shippingFee: row.shipping_fee ?? undefined,
+    discountCode: row.discount_code ?? undefined,
     discountAmount: row.discount_amount ?? undefined,
+    finalPrice: row.final_price ?? row.total_price,
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? undefined,
     filmDeliveryMethod: (row.film_delivery_method as Order["filmDeliveryMethod"]) ?? "drop_off",
@@ -267,7 +272,9 @@ export function mapSubmittedOrder(
     totalPrice: payload.order.total_price,
     filmTotal: payload.order.film_total,
     shippingFee: payload.order.shipping_fee,
+    discountCode: payload.order.discount_code ?? undefined,
     discountAmount: payload.order.discount_amount,
+    finalPrice: payload.order.final_price ?? payload.order.total_price,
     createdAt,
     filmDeliveryMethod: draft.filmDeliveryMethod ?? "drop_off",
     returnMethod: payload.order.return_method as Order["returnMethod"]
@@ -310,6 +317,7 @@ export function buildCustomerRows(orders: Order[]): AdminCustomerRow[] {
         name: order.customer.name,
         phone: order.customer.phone,
         lineId: order.customer.lineId,
+        lineUserId: order.customer.lineUserId,
         lineDisplayName: order.customer.lineDisplayName,
         lineConnected: order.customer.lineConnected,
         email: order.customer.email,
@@ -365,9 +373,8 @@ export function draftToDbPayload(draft: DraftOrder) {
   const pricedRolls = draft.rolls.map((roll) => ({ ...roll, price: priceRoll(roll) }));
   const rolls = pricedRolls.map((roll) => filmRollToDb(roll));
   const shippingFee = wantsDelivery ? 60 : 0;
-  const discountAmount = getTotalFilmageDiscount(pricedRolls);
   const filmTotal = pricedRolls.reduce((sum, roll) => sum + roll.price, 0);
-  const totalPrice = filmTotal + shippingFee;
+  const subtotal = filmTotal + shippingFee;
   const returnMethod = draft.returnMethod ?? filmReturnToReturnMethod(draft.delivery.filmReturn);
 
   const initialStatus: OrderStatus =
@@ -407,8 +414,10 @@ export function draftToDbPayload(draft: DraftOrder) {
       notes: draft.delivery.notes?.trim() || null,
       film_total: filmTotal,
       shipping_fee: shippingFee,
-      discount_amount: discountAmount,
-      total_price: totalPrice
+      discount_code: null,
+      discount_amount: 0,
+      final_price: subtotal,
+      total_price: subtotal
     },
     payment: {
       method: draft.payment.method,
@@ -418,7 +427,7 @@ export function draftToDbPayload(draft: DraftOrder) {
       bank_name: BANK_NAME_EN,
       account_number: ACCOUNT_NUMBER_COPY,
       account_name: ACCOUNT_NAME_EN,
-      amount: totalPrice
+      amount: subtotal
     },
     rolls
   };

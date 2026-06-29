@@ -1,8 +1,6 @@
 import { isFilmBrand } from "@/lib/film-catalog";
 import type { BwDeveloper, FilmRoll, PushPullStops } from "@/lib/types";
 
-export const VALIDATION_MESSAGE = "กรุณากรอกข้อมูล";
-
 export type FilmRollFieldKey =
   | "filmType"
   | "format"

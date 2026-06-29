@@ -9,7 +9,9 @@ export const TABLES = {
   adminUsers: isBeta ? "beta_admin_users" : "admin_users",
   payments: isBeta ? "beta_payments" : "payments",
   /** Shared table — same name in all environments. */
-  pricingSettings: "pricing_settings"
+  pricingSettings: "pricing_settings",
+  discountCodes: "discount_codes",
+  customerCoupons: "customer_coupons"
 } as const;
 
 export type TableKey = keyof typeof TABLES;

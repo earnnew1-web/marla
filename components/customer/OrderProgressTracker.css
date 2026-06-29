@@ -20,6 +20,24 @@
   }
 }
 
+.order-progress-track--compact {
+  --progress-step-width: 68px;
+  --progress-ring-size: 76px;
+  --progress-ring-padding: 2px;
+  --progress-ring-border: 3px;
+  --progress-label-gap: 10px;
+  --progress-label-height: 32px;
+}
+
+@media (min-width: 640px) {
+  .order-progress-track--compact {
+    --progress-step-width: 88px;
+    --progress-ring-size: 80px;
+    --progress-label-gap: 12px;
+    --progress-label-height: 36px;
+  }
+}
+
 .order-progress-row {
   align-items: flex-start;
 }
@@ -66,6 +84,10 @@
   border-color: rgba(211, 50, 43, 0.35);
 }
 
+.order-progress-track--compact .order-progress-ring--completed {
+  border-color: transparent;
+}
+
 .order-progress-image-wrapper {
   width: 100%;
   height: 100%;
@@ -77,10 +99,15 @@
 .order-progress-label {
   margin-top: var(--progress-label-gap);
   min-height: var(--progress-label-height);
-  line-height: var(--progress-label-height);
+  line-height: 1.2;
   text-align: center;
-  white-space: nowrap;
   width: 100%;
+  white-space: normal;
+}
+
+.order-progress-track:not(.order-progress-track--compact) .order-progress-label {
+  white-space: nowrap;
+  line-height: var(--progress-label-height);
 }
 
 .order-progress-connector-wrap {
@@ -88,7 +115,7 @@
   align-self: flex-start;
   display: flex;
   align-items: center;
-  padding-top: calc(var(--progress-ring-size) / 2 - 1.5px);
+  padding-top: calc(var(--progress-ring-size) / 2 - 2px);
 }
 
 .order-progress-connector {
@@ -99,8 +126,17 @@
   overflow: hidden;
 }
 
+.order-progress-track--compact .order-progress-connector {
+  height: 4px;
+  background: #ddd5cb;
+}
+
 .order-progress-connector--completed {
   background: #d3322b;
+}
+
+.order-progress-track--compact .order-progress-connector--completed {
+  background: rgba(211, 50, 43, 0.45);
 }
 
 .order-progress-connector--active::after {
@@ -116,6 +152,21 @@
     transparent 100%
   );
   animation: order-progress-line-flow 2s ease-in-out infinite;
+}
+
+.order-progress-track--compact .order-progress-connector--active {
+  background: rgba(211, 50, 43, 0.2);
+}
+
+.order-progress-track--compact .order-progress-connector--active::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(211, 50, 43, 0.35) 20%,
+    rgba(211, 50, 43, 1) 50%,
+    rgba(211, 50, 43, 0.35) 80%,
+    transparent 100%
+  );
 }
 
 @keyframes order-progress-line-flow {

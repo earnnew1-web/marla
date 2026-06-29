@@ -1,5 +1,13 @@
 import { sendLineOrderReceivedFromContext } from "@/lib/line/send-status";
+import { sendWelcomeCouponMessage } from "@/lib/line/send-welcome";
 import { TABLES } from "@/lib/config/tables";
+import {
+  ensureWelcomeCouponForLineUser,
+  fetchCouponsByLineUserIds,
+  getCouponStatusLabel,
+  markCustomerCouponUsed
+} from "@/lib/db/customer-coupons";
+import { incrementDiscountCodeUsage, validateDiscountCodeForOrder } from "@/lib/db/discount-codes";
 import { formatOrderCode, nextOrderCodeSequence } from "@/lib/order-code";
 import { defaultPricing } from "@/lib/pricing";
 import { formatSupabaseError } from "@/lib/supabase/errors";
@@ -40,9 +48,66 @@ export async function createOrderInDb(draft: DraftOrder): Promise<Order> {
   const payload = draftToDbPayload(draft);
   const orderCode = await generateOrderCode(supabase);
 
+  const subtotal = (payload.order.film_total ?? 0) + (payload.order.shipping_fee ?? 0);
+  let promoCode: string | null = null;
+  let promoAmount = 0;
+  let promoCodeId: string | null = null;
+  let promoSource: "discount_code" | "customer_coupon" | null = null;
+
+  if (draft.discountCode?.trim()) {
+    const validation = await validateDiscountCodeForOrder(draft.discountCode, {
+      lineUserId: draft.customer?.lineUserId,
+      phone: draft.customer?.phone,
+      email: draft.customer?.email
+    });
+
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    promoCode = validation.code.code;
+    promoAmount = validation.code.discountValue;
+    promoCodeId = validation.code.id;
+    promoSource = validation.code.source ?? "discount_code";
+  }
+
+  const finalPrice = Math.max(0, subtotal - promoAmount);
+  Object.assign(payload.order, {
+    discount_code: promoCode,
+    discount_amount: promoAmount,
+    final_price: finalPrice,
+    total_price: finalPrice
+  });
+  payload.payment.amount = finalPrice;
+
+  const phone = payload.customer.phone.trim();
+  let customerInsert = { ...payload.customer };
+
+  if (phone && !customerInsert.line_user_id) {
+    const { data: linkedCustomer } = await supabase
+      .from(TABLES.customers)
+      .select("line_user_id, line_display_name, line_picture_url, line_connected")
+      .eq("phone", phone)
+      .eq("line_connected", true)
+      .not("line_user_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (linkedCustomer?.line_user_id) {
+      customerInsert = {
+        ...customerInsert,
+        line_user_id: linkedCustomer.line_user_id,
+        line_display_name: linkedCustomer.line_display_name,
+        line_picture_url: linkedCustomer.line_picture_url,
+        line_connected: true
+      };
+    }
+  }
+
   const { data: customerRow, error: customerError } = await supabase
     .from(TABLES.customers)
-    .insert(payload.customer)
+    .insert(customerInsert)
     .select("id")
     .single();
 
@@ -85,6 +150,22 @@ export async function createOrderInDb(draft: DraftOrder): Promise<Order> {
     throw new Error(formatSupabaseError(paymentResult.error));
   }
 
+  if (customerInsert.line_user_id) {
+    const { coupon, created } = await ensureWelcomeCouponForLineUser({
+      lineUserId: customerInsert.line_user_id,
+      customerId: customerRow.id
+    });
+    if (created) {
+      await sendWelcomeCouponMessage(customerInsert.line_user_id, coupon.code);
+    }
+  }
+
+  if (promoCodeId && promoSource === "customer_coupon") {
+    await markCustomerCouponUsed(promoCodeId);
+  } else if (promoCodeId) {
+    await incrementDiscountCodeUsage(promoCodeId);
+  }
+
   const order = mapSubmittedOrder(
     draft,
     { orderId: orderRow.id, customerId: customerRow.id, orderCode },
@@ -95,8 +176,8 @@ export async function createOrderInDb(draft: DraftOrder): Promise<Order> {
     orderId: orderRow.id,
     orderCode,
     totalPrice: payload.order.total_price,
-    customerPhone: payload.customer.phone,
-    lineUserId: payload.customer.line_user_id,
+    customerPhone: customerInsert.phone,
+    lineUserId: customerInsert.line_user_id,
     orderStatus: payload.order.status,
     filmDeliveryMethod: payload.order.film_delivery_method as FilmDeliveryMethod
   });
@@ -157,6 +238,71 @@ export async function fetchOrderByCodeAndPhone(code: string, phone: string): Pro
   const order = await fetchOrderByCodeFromDb(code);
   if (!order) return null;
   return order.customer.phone.trim() === phone.trim() ? order : null;
+}
+
+export async function fetchOrderByCodeForAdmin(code: string): Promise<Order | null> {
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from(TABLES.orders)
+    .select(getOrderSelect())
+    .ilike("order_code", code.trim())
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapOrder(data as unknown as DbOrderRow) : null;
+}
+
+export async function linkLineToOrderByCode(
+  orderCode: string,
+  profile: { userId: string; displayName: string; pictureUrl?: string | null }
+): Promise<{ order: Order; isFirstConnect: boolean; welcomeCouponCode?: string }> {
+  const order = await fetchOrderByCodeForAdmin(orderCode);
+  if (!order) {
+    throw new Error("Order not found");
+  }
+
+  const lineUserId = profile.userId.trim();
+  if (!lineUserId) {
+    throw new Error("LINE profile is missing user ID");
+  }
+
+  const alreadyLinked =
+    order.customer.lineConnected && order.customer.lineUserId?.trim() === lineUserId;
+
+  if (alreadyLinked) {
+    return { order, isFirstConnect: false };
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const { error } = await supabase
+    .from(TABLES.customers)
+    .update({
+      line_user_id: lineUserId,
+      line_display_name: profile.displayName.trim() || null,
+      line_picture_url: profile.pictureUrl?.trim() || null,
+      line_connected: true
+    })
+    .eq("id", order.customer.id);
+
+  if (error) {
+    throw new Error(formatSupabaseError(error));
+  }
+
+  const updated = await fetchOrderByIdForAdmin(order.id);
+  if (!updated) {
+    throw new Error("Order not found after LINE link");
+  }
+
+  const { coupon } = await ensureWelcomeCouponForLineUser({
+    lineUserId,
+    customerId: updated.customer.id
+  });
+
+  return {
+    order: updated,
+    isFirstConnect: true,
+    welcomeCouponCode: coupon.code
+  };
 }
 
 export async function updateOrderStatusInDb(
@@ -266,7 +412,21 @@ export async function fetchDashboardStatsFromDb() {
 
 export async function fetchCustomersFromDb() {
   const orders = await fetchOrdersForAdmin();
-  return buildCustomerRows(orders);
+  const customers = buildCustomerRows(orders);
+  const lineUserIds = customers
+    .map((customer) => customer.lineUserId)
+    .filter((value): value is string => Boolean(value?.trim()));
+  const coupons = await fetchCouponsByLineUserIds(lineUserIds);
+
+  return customers.map((customer) => {
+    const coupon = customer.lineUserId ? coupons.get(customer.lineUserId) : undefined;
+    return {
+      ...customer,
+      welcomeCouponCode: coupon?.code ?? null,
+      welcomeCouponExpiresAt: coupon?.expiresAt ?? null,
+      welcomeCouponStatus: coupon ? getCouponStatusLabel(coupon) : null
+    };
+  });
 }
 
 export async function fetchPricingFromDb(): Promise<PricingSettings> {

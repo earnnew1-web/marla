@@ -18,7 +18,7 @@ type CustomerLanguageContextValue = {
 const CustomerLanguageContext = createContext<CustomerLanguageContextValue | null>(null);
 
 export function CustomerLanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<CustomerLanguage>("en");
+  const [language, setLanguageState] = useState<CustomerLanguage>(() => getStoredLanguage());
 
   useEffect(() => {
     setLanguageState(getStoredLanguage());

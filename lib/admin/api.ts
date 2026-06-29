@@ -1,4 +1,4 @@
-import type { AdminCustomerRow, AdminDashboardStats, Order, OrderStatus, PricingSettings } from "@/lib/types";
+import type { AdminCustomerRow, AdminDashboardStats, DiscountCode, Order, OrderStatus, PricingSettings } from "@/lib/types";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const payload = (await response.json()) as T & {
@@ -114,4 +114,23 @@ export async function saveAdminPricing(pricing: PricingSettings) {
     body: JSON.stringify(pricing)
   });
   return parseJson<{ pricing: PricingSettings }>(response);
+}
+
+export async function fetchAdminDiscountCodes() {
+  const response = await fetch("/api/admin/discount-codes", { cache: "no-store" });
+  return parseJson<{ codes: DiscountCode[] }>(response);
+}
+
+export async function generateAdminDiscountCode() {
+  const response = await fetch("/api/admin/discount-codes", { method: "POST" });
+  return parseJson<{ code: DiscountCode }>(response);
+}
+
+export async function setAdminDiscountCodeActive(id: string, active: boolean) {
+  const response = await fetch("/api/admin/discount-codes", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, active })
+  });
+  return parseJson<{ code: DiscountCode }>(response);
 }

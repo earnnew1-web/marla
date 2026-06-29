@@ -14,7 +14,6 @@ import {
 import {
   RETURN_METHOD_FIELD_ORDER,
   shouldShowReturnFieldError,
-  VALIDATION_MESSAGE,
   type ReturnMethodFieldKey
 } from "@/lib/return-method-validation";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
@@ -154,11 +153,13 @@ function ValidationField({
   onBlur?: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useCustomerLanguage();
+
   return (
     <div ref={fieldRef} tabIndex={-1} onBlur={onBlur} className="space-y-2.5 outline-none">
       <Label className={sectionTitle}>{label}</Label>
       {children}
-      {showError ? <p className="text-xs text-destructive/90">{VALIDATION_MESSAGE}</p> : null}
+      {showError ? <p className="text-xs text-destructive/90">{t.common.errors.required}</p> : null}
     </div>
   );
 }

@@ -74,13 +74,16 @@ export default function AdminCustomersPage() {
                   <TableHead>Phone</TableHead>
                   <TableHead>LINE ID</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Welcome Coupon</TableHead>
+                  <TableHead>Coupon Expiry</TableHead>
+                  <TableHead>Coupon Status</TableHead>
                   <TableHead>Total Orders</TableHead>
                   <TableHead>Last Order</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((customer) => (
-                  <TableRow key={customer.phone}>
+                  <TableRow key={customer.id}>
                     <TableCell className="font-semibold">{customer.name}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
                     <TableCell>
@@ -89,6 +92,11 @@ export default function AdminCustomersPage() {
                         : customer.lineId || "—"}
                     </TableCell>
                     <TableCell>{customer.email || "—"}</TableCell>
+                    <TableCell>{customer.welcomeCouponCode || "—"}</TableCell>
+                    <TableCell>
+                      {customer.welcomeCouponExpiresAt ? shortDate(customer.welcomeCouponExpiresAt) : "—"}
+                    </TableCell>
+                    <TableCell>{customer.welcomeCouponStatus || "—"}</TableCell>
                     <TableCell>{customer.orderCount}</TableCell>
                     <TableCell>{shortDate(customer.lastOrderAt)}</TableCell>
                   </TableRow>

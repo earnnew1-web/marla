@@ -15,11 +15,13 @@ export type OrderBreakdownKey =
   | "shipping"
   | "pushPull"
   | "filmSoup"
-  | "filmageDiscount";
+  | "filmageDiscount"
+  | "promoDiscount";
 
 export type OrderBreakdownLine = {
   key: OrderBreakdownKey;
   amount: number;
+  promoCode?: string;
 };
 
 const FILMAGE_LABEL = "Filmage Discount";
@@ -61,7 +63,11 @@ export function getStep2OrderSummary(rolls: FilmRoll[], returnMethod: ReturnMeth
   };
 }
 
-export function getOrderPriceBreakdown(rolls: FilmRoll[], returnMethod: ReturnMethod) {
+export function getOrderPriceBreakdown(
+  rolls: FilmRoll[],
+  returnMethod: ReturnMethod,
+  promoDiscount?: { code: string; amount: number } | null
+) {
   let filmTotal = 0;
   let pushPull = 0;
   let filmSoup = 0;
@@ -102,7 +108,15 @@ export function getOrderPriceBreakdown(rolls: FilmRoll[], returnMethod: ReturnMe
     lines.push({ key: "filmageDiscount", amount: filmageDiscount });
   }
 
-  const estimatedTotal = priceRollsTotal(rolls) + shipping;
+  if (promoDiscount && promoDiscount.amount > 0) {
+    lines.push({
+      key: "promoDiscount",
+      amount: -promoDiscount.amount,
+      promoCode: promoDiscount.code
+    });
+  }
+
+  const estimatedTotal = Math.max(0, priceRollsTotal(rolls) + shipping - (promoDiscount?.amount ?? 0));
 
   return { lines, estimatedTotal };
 }

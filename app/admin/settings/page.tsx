@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { AdminDiscountCodesSection } from "@/components/admin/AdminDiscountCodesSection";
 import { AdminToast } from "@/components/admin/AdminToast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,10 +54,11 @@ export default function AdminSettingsPage() {
     <AdminLayout>
       <div className="mb-6">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Settings</p>
-        <h1 className="mt-2 text-3xl font-bold">Pricing</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Saved to Supabase and used for new customer orders.</p>
+        <h1 className="mt-2 text-3xl font-bold">Settings</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Manage pricing and first-order discount codes.</p>
       </div>
 
+      <div className="space-y-6">
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>Pricing fields</CardTitle>
@@ -102,6 +104,9 @@ export default function AdminSettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <AdminDiscountCodesSection />
+      </div>
 
       {toast ? <AdminToast message={toast.message} tone={toast.tone} onClose={() => setToast(null)} /> : null}
     </AdminLayout>

@@ -213,3 +213,91 @@ export function buildOrderStatusFlex(order: FlexOrderInput) {
     }
   };
 }
+
+export function buildWelcomeCouponFlex(couponCode: string) {
+  const orderUrl = `${getSiteUrl()}/order`;
+
+  return {
+    type: "flex" as const,
+    altText: `Welcome to Marla Film Lab · ${couponCode}`,
+    contents: {
+      type: "bubble" as const,
+      size: "mega" as const,
+      hero: {
+        type: "image" as const,
+        url: statusHeroUrl("order_received"),
+        size: "full" as const,
+        aspectRatio: "1:1" as const,
+        aspectMode: "fit" as const,
+        backgroundColor: BRAND.paper
+      },
+      body: {
+        type: "box" as const,
+        layout: "vertical" as const,
+        backgroundColor: BRAND.paper,
+        paddingAll: "20px" as const,
+        contents: [
+          {
+            type: "text" as const,
+            text: "Welcome to Marla Film Lab",
+            weight: "bold" as const,
+            size: "xl" as const,
+            color: BRAND.ink,
+            wrap: true
+          },
+          {
+            type: "text" as const,
+            text: "Thanks for adding us on LINE.",
+            size: "sm" as const,
+            color: BRAND.muted,
+            wrap: true,
+            margin: "md" as const
+          },
+          {
+            type: "separator" as const,
+            margin: "lg" as const,
+            color: BRAND.border
+          },
+          {
+            type: "text" as const,
+            text: "Gift",
+            size: "xs" as const,
+            weight: "bold" as const,
+            color: BRAND.muted,
+            margin: "md" as const
+          },
+          {
+            type: "text" as const,
+            text: "Get 50 THB off your first roll.",
+            size: "sm" as const,
+            color: BRAND.ink,
+            wrap: true,
+            margin: "sm" as const
+          },
+          infoRow("Coupon", couponCode),
+          infoRow("Validity", "Valid for 3 months")
+        ]
+      },
+      footer: {
+        type: "box" as const,
+        layout: "vertical" as const,
+        spacing: "sm" as const,
+        backgroundColor: BRAND.paper,
+        paddingAll: "16px" as const,
+        contents: [
+          {
+            type: "button" as const,
+            style: "primary" as const,
+            color: "#C45C4A",
+            height: "sm" as const,
+            action: {
+              type: "uri" as const,
+              label: "Start New Order",
+              uri: orderUrl
+            }
+          }
+        ]
+      }
+    }
+  };
+}
