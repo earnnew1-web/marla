@@ -9,8 +9,15 @@ export const WELCOME_COUPON_DISCOUNT_VALUE = 50;
 
 export const WELCOME_COUPON_VALIDITY_MONTHS = 3;
 
+/** UI-only placeholder — never persist or submit to the server. */
+export const WELCOME_GIFT_PLACEHOLDER_CODE = "WELCOME-GIFT";
+
 export function isWelcomeCouponCode(code: string): boolean {
   return code.trim().toUpperCase().startsWith(WELCOME_COUPON_PREFIX);
+}
+
+export function isWelcomeGiftPlaceholder(code: string): boolean {
+  return code.trim().toUpperCase() === WELCOME_GIFT_PLACEHOLDER_CODE;
 }
 
 export function generateWelcomeCouponSuffix(length = WELCOME_COUPON_SUFFIX_LENGTH): string {

@@ -6,6 +6,8 @@ import { useLiff } from "@/components/line/LiffProvider";
 import { applyLineProfileToCustomer } from "@/lib/line/customer-fields";
 import { loadDraft, saveDraft } from "@/lib/storage";
 
+const LINE_PROFILE_TIMEOUT_MS = 4000;
+
 export default function OrderEntryPage() {
   const router = useRouter();
   const { ready, inLine, profile, initError } = useLiff();
@@ -24,9 +26,16 @@ export default function OrderEntryPage() {
       });
     }
 
-    if (inLine && !profile?.userId) return;
+    if (!inLine || profile?.userId) {
+      router.replace("/order/film-rolls");
+      return;
+    }
 
-    router.replace("/order/customer-info");
+    const timeout = window.setTimeout(() => {
+      router.replace("/order/film-rolls");
+    }, LINE_PROFILE_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeout);
   }, [ready, inLine, profile?.userId, router]);
 
   return (

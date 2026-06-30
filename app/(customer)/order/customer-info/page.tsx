@@ -1,11 +1,10 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { CustomerInfoLineConnectCard } from "@/components/customer/CustomerInfoLineConnectCard";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
-import { FilmDeliveryMethodSection } from "@/components/customer/FilmDeliveryMethodSection";
 import { LineDebugPanel } from "@/components/line/LineDebugPanel";
 import { OrderStepIndicator } from "@/components/customer/OrderStepIndicator";
 import { OrderStepNavigation } from "@/components/customer/OrderStepNavigation";
@@ -15,11 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getStoredLineProfile, refreshLineProfile, useLiff } from "@/components/line/LiffProvider";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
-import { DEFAULT_FILM_DELIVERY_METHOD } from "@/lib/film-delivery";
-import { applyLineProfileToCustomer, resolveLineProfile } from "@/lib/line/customer-fields";
+import { fetchWelcomeCoupon, submitOrder } from "@/lib/customer/api";
+import { isWelcomeCouponCode, isWelcomeGiftPlaceholder } from "@/lib/customer-coupons";
+import { orderRequiresCustomerEmail } from "@/lib/film-pricing";
+import { applyLineProfileToCustomer, buildLineSubmitPayload, resolveLineProfile } from "@/lib/line/customer-fields";
 import { pageTitle, stepEyebrow } from "@/lib/typography";
-import { loadDraft, saveDraft } from "@/lib/storage";
-import type { CustomerDraft, FilmDeliveryMethod } from "@/lib/types";
+import { clearDraft, loadDraft, saveDraft } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
 type CustomerForm = {
@@ -36,52 +36,51 @@ const emptyForm = (): CustomerForm => ({
   phone: "",
   lineId: "",
   email: "",
-  allowSocialShare: false,
+  allowSocialShare: true,
   instagramUsername: ""
 });
 
 export default function CustomerInfoPage() {
-  return (
-    <Suspense
-      fallback={
-        <CustomerLayout>
-          <div className="mx-auto max-w-2xl px-1 py-12 text-center">
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          </div>
-        </CustomerLayout>
-      }
-    >
-      <CustomerInfoContent />
-    </Suspense>
-  );
+  return <CustomerInfoContent />;
 }
 
 function CustomerInfoContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { t } = useCustomerLanguage();
-  const { inLine, profile, ready: liffReady } = useLiff();
+  const { inLine, profile } = useLiff();
   const [form, setForm] = useState<CustomerForm>(emptyForm);
-  const [customerDraft, setCustomerDraft] = useState<CustomerDraft | null>(null);
-  const [filmDeliveryMethod, setFilmDeliveryMethod] = useState<FilmDeliveryMethod>(DEFAULT_FILM_DELIVERY_METHOD);
+  const [emailRequired, setEmailRequired] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const draft = loadDraft();
-    setFilmDeliveryMethod(draft.filmDeliveryMethod ?? DEFAULT_FILM_DELIVERY_METHOD);
+    if (!draft.rolls?.length) {
+      router.replace("/order/film-rolls");
+      return;
+    }
+    if (!draft.delivery) {
+      router.replace("/order/film-rolls");
+      return;
+    }
+    if (!draft.payment) {
+      router.replace("/order/payment");
+      return;
+    }
+
+    setEmailRequired(orderRequiresCustomerEmail(draft.rolls ?? []));
+
     if (draft.customer) {
-      setCustomerDraft(draft.customer);
       setForm({
         name: draft.customer.name,
         phone: draft.customer.phone,
         lineId: draft.customer.lineId ?? "",
         email: draft.customer.email ?? "",
-        allowSocialShare: draft.customer.allowSocialShare ?? false,
+        allowSocialShare: draft.customer.allowSocialShare ?? true,
         instagramUsername: draft.customer.instagramUsername ?? ""
       });
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!profile?.userId) return;
@@ -95,31 +94,33 @@ function CustomerInfoContent() {
       ...draft,
       customer: nextCustomer
     });
-    setCustomerDraft(nextCustomer);
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("mfl:skip-line-connect-step1");
-    }
+    setForm((current) => ({
+      ...current,
+      name: nextCustomer.name || current.name,
+      phone: nextCustomer.phone || current.phone,
+      lineId: nextCustomer.lineId ?? current.lineId,
+      email: nextCustomer.email ?? current.email
+    }));
   }, [profile]);
 
-  useEffect(() => {
-    if (!liffReady || searchParams.get("connectLine") !== "1") return;
-
-    void (async () => {
-      const activeProfile = profile ?? (await refreshLineProfile());
-      if (!activeProfile?.userId) return;
-
-      const draft = loadDraft();
-      const nextCustomer = applyLineProfileToCustomer(
-        draft.customer ?? { name: "", phone: "", email: "" },
-        activeProfile
-      );
-      saveDraft({ ...draft, customer: nextCustomer });
-      setCustomerDraft(nextCustomer);
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("mfl:skip-line-connect-step1");
-      }
-    })();
-  }, [liffReady, profile, searchParams]);
+  const goBack = () => {
+    const draft = loadDraft();
+    const baseCustomer = {
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      lineId: form.lineId.trim(),
+      email: emailRequired ? form.email.trim() : "",
+      allowSocialShare: form.allowSocialShare,
+      instagramUsername:
+        form.allowSocialShare && form.instagramUsername.trim() ? form.instagramUsername.trim() : null,
+      lineUserId: draft.customer?.lineUserId,
+      lineDisplayName: draft.customer?.lineDisplayName,
+      linePictureUrl: draft.customer?.linePictureUrl,
+      lineConnected: draft.customer?.lineConnected
+    };
+    saveDraft({ ...draft, customer: baseCustomer });
+    router.push("/order/payment");
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -127,7 +128,7 @@ function CustomerInfoContent() {
     if (!form.name.trim()) nextErrors.name = t.customerInfo.errors.name;
     if (!form.phone.trim()) nextErrors.phone = t.customerInfo.errors.phone;
     if (!form.lineId.trim()) nextErrors.lineId = t.customerInfo.errors.lineId;
-    if (!form.email.trim()) nextErrors.email = t.customerInfo.errors.email;
+    if (emailRequired && !form.email.trim()) nextErrors.email = t.customerInfo.errors.email;
     if (form.allowSocialShare && !form.instagramUsername.trim()) {
       nextErrors.instagram = t.customerInfo.errors.instagram;
     }
@@ -142,17 +143,27 @@ function CustomerInfoContent() {
 
     setSubmitting(true);
     try {
+      const draft = loadDraft();
+      if (!draft.payment) {
+        router.replace("/order/payment");
+        return;
+      }
+      if (draft.payment.method === "bank_transfer" && !draft.payment.paymentSlipDataUrl) {
+        toast.error(t.payment.slipRequired);
+        router.push("/order/payment");
+        return;
+      }
+
       let activeProfile = resolveLineProfile(profile ?? getStoredLineProfile());
       if (inLine && !activeProfile?.userId) {
         activeProfile = await refreshLineProfile();
       }
 
-      const draft = loadDraft();
       const baseCustomer = {
         name: form.name.trim(),
         phone: form.phone.trim(),
         lineId: form.lineId.trim(),
-        email: form.email.trim(),
+        email: emailRequired ? form.email.trim() : "",
         allowSocialShare: form.allowSocialShare,
         instagramUsername:
           form.allowSocialShare && form.instagramUsername.trim() ? form.instagramUsername.trim() : null,
@@ -161,13 +172,47 @@ function CustomerInfoContent() {
         linePictureUrl: draft.customer?.linePictureUrl,
         lineConnected: draft.customer?.lineConnected
       };
+      const customer = applyLineProfileToCustomer(baseCustomer, activeProfile);
 
-      saveDraft({
+      console.log("[Submit] line payload", buildLineSubmitPayload(customer));
+
+      let discountCode = draft.discountCode;
+      let discountAmount = draft.discountAmount;
+
+      if (
+        customer.lineUserId &&
+        (!discountCode || isWelcomeCouponCode(discountCode) || isWelcomeGiftPlaceholder(discountCode))
+      ) {
+        const welcome = await fetchWelcomeCoupon({
+          lineUserId: customer.lineUserId,
+          phone: customer.phone,
+          email: customer.email,
+          ensure: true
+        });
+        if (welcome.valid) {
+          discountCode = welcome.code;
+          discountAmount = welcome.discountValue;
+        } else if (discountCode && isWelcomeGiftPlaceholder(discountCode)) {
+          discountCode = undefined;
+          discountAmount = undefined;
+        }
+      }
+
+      const nextDraft = {
         ...draft,
-        filmDeliveryMethod,
-        customer: applyLineProfileToCustomer(baseCustomer, activeProfile)
-      });
-      router.push("/order/film-rolls");
+        customer,
+        discountCode,
+        discountAmount
+      };
+      saveDraft(nextDraft);
+
+      const { order } = await submitOrder(nextDraft);
+      localStorage.setItem("mfl:last-order-code", order.orderCode);
+      clearDraft();
+      router.push(`/order/confirmation?code=${encodeURIComponent(order.orderCode)}`);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : t.payment.submitFailed);
     } finally {
       setSubmitting(false);
     }
@@ -175,7 +220,7 @@ function CustomerInfoContent() {
 
   return (
     <CustomerLayout>
-      <OrderStepIndicator current={1}>
+      <OrderStepIndicator current={3}>
         <Card className="border-0 bg-card shadow-none">
           <form onSubmit={submit}>
             <CardHeader className="p-5 sm:p-7">
@@ -184,19 +229,6 @@ function CustomerInfoContent() {
               <p className="mt-2 font-normal text-muted-foreground">{t.customerInfo.subtitle}</p>
             </CardHeader>
             <CardContent className="space-y-4 p-5 pt-0 sm:px-7 sm:pb-7">
-            <CustomerInfoLineConnectCard
-              customer={customerDraft}
-              onCustomerChange={(customer) => {
-                setCustomerDraft(customer);
-                setForm((current) => ({
-                  ...current,
-                  name: customer.name || current.name,
-                  phone: customer.phone || current.phone,
-                  lineId: customer.lineId ?? current.lineId,
-                  email: customer.email ?? current.email
-                }));
-              }}
-            />
             <LineDebugPanel />
             <TextField
               id="customer-name"
@@ -219,20 +251,17 @@ function CustomerInfoContent() {
               error={errors.lineId}
               onChange={(lineId) => setForm({ ...form, lineId })}
             />
-            <TextField
-              id="customer-email"
-              label={t.customerInfo.email}
-              value={form.email}
-              error={errors.email}
-              onChange={(email) => setForm({ ...form, email })}
-              type="email"
-              placeholder={t.customerInfo.emailPlaceholder}
-            />
-
-            <FilmDeliveryMethodSection
-              filmDeliveryMethod={filmDeliveryMethod}
-              onChange={setFilmDeliveryMethod}
-            />
+            {emailRequired ? (
+              <TextField
+                id="customer-email"
+                label={t.customerInfo.email}
+                value={form.email}
+                error={errors.email}
+                onChange={(email) => setForm({ ...form, email })}
+                type="email"
+                placeholder={t.customerInfo.emailPlaceholder}
+              />
+            ) : null}
 
             <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/50 p-4">
               <Checkbox
@@ -272,14 +301,31 @@ function CustomerInfoContent() {
             ) : null}
 
             <OrderStepNavigation
-              showBack={false}
-              continueLabel={submitting ? "..." : t.customerInfo.continue}
+              onBack={goBack}
+              continueLabel={submitting ? t.payment.submitting : t.payment.confirmOrder}
               continueType="submit"
+              continueDisabled={submitting}
+              continueLoading={submitting}
             />
           </CardContent>
         </form>
         </Card>
       </OrderStepIndicator>
+
+      {submitting ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 px-4 backdrop-blur-sm"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-border/70 bg-card px-6 py-8 text-center shadow-lg">
+            <Loader2 className="h-9 w-9 animate-spin text-accent" />
+            <p className="text-base font-bold">{t.payment.submitting}</p>
+            <p className="text-sm text-muted-foreground">{t.payment.submittingDetail}</p>
+          </div>
+        </div>
+      ) : null}
     </CustomerLayout>
   );
 }

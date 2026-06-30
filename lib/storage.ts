@@ -5,9 +5,10 @@ import { mockOrders } from "@/lib/mock-data";
 import { formatOrderCode, nextOrderCodeSequence } from "@/lib/order-code";
 import { defaultPricing, priceRoll, priceTotal } from "@/lib/pricing";
 import { customerLineLabel } from "@/lib/line/customer-fields";
-import type { DraftOrder, Order, OrderStatus, PricingSettings } from "@/lib/types";
+import type { DraftOrder, Order, OrderStatus, PaymentInfo, PricingSettings } from "@/lib/types";
 
 const draftKey = "mfl:draft-order";
+const slipKey = "mfl:payment-slip";
 const ordersKey = "mfl:orders";
 const pricingKey = "mfl:pricing";
 const adminSessionKey = "mfl:admin-session";
@@ -16,22 +17,77 @@ export { emptyRoll };
 
 export const emptyDraft = (): DraftOrder => ({ rolls: [emptyRoll()] });
 
-export function loadDraft(): DraftOrder {
-  const raw = localStorage.getItem(draftKey);
-  if (!raw) return emptyDraft();
-  const parsed = JSON.parse(raw) as DraftOrder;
+type StoredSlip = Pick<PaymentInfo, "paymentSlipDataUrl" | "paymentSlipFileName">;
+
+function readPaymentSlip(): StoredSlip | null {
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem(slipKey);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as StoredSlip;
+  } catch {
+    sessionStorage.removeItem(slipKey);
+    return null;
+  }
+}
+
+function writePaymentSlip(slip: StoredSlip | null) {
+  if (typeof window === "undefined") return;
+  if (!slip?.paymentSlipDataUrl) {
+    sessionStorage.removeItem(slipKey);
+    return;
+  }
+  sessionStorage.setItem(slipKey, JSON.stringify(slip));
+}
+
+function mergePaymentSlip(draft: DraftOrder): DraftOrder {
+  const slip = readPaymentSlip();
+  if (!slip?.paymentSlipDataUrl) return draft;
   return {
-    ...parsed,
-    rolls: normalizeRolls(parsed.rolls ?? [])
+    ...draft,
+    payment: {
+      ...draft.payment,
+      method: draft.payment?.method ?? "bank_transfer",
+      ...slip
+    }
   };
 }
 
+function stripSlipForStorage(draft: DraftOrder): DraftOrder {
+  if (!draft.payment?.paymentSlipDataUrl) return draft;
+  const { paymentSlipDataUrl, paymentSlipFileName, ...paymentRest } = draft.payment;
+  writePaymentSlip({ paymentSlipDataUrl, paymentSlipFileName });
+  return {
+    ...draft,
+    payment: Object.keys(paymentRest).length ? paymentRest : undefined
+  };
+}
+
+export function loadDraft(): DraftOrder {
+  if (typeof window === "undefined") return emptyDraft();
+
+  const raw = localStorage.getItem(draftKey);
+  if (!raw) return emptyDraft();
+
+  try {
+    const parsed = JSON.parse(raw) as DraftOrder;
+    return mergePaymentSlip({
+      ...parsed,
+      rolls: normalizeRolls(parsed.rolls ?? [])
+    });
+  } catch {
+    localStorage.removeItem(draftKey);
+    return emptyDraft();
+  }
+}
+
 export function saveDraft(draft: DraftOrder) {
-  localStorage.setItem(draftKey, JSON.stringify(draft));
+  localStorage.setItem(draftKey, JSON.stringify(stripSlipForStorage(draft)));
 }
 
 export function clearDraft() {
   localStorage.removeItem(draftKey);
+  writePaymentSlip(null);
 }
 
 export function loadPricing(): PricingSettings {

@@ -2,6 +2,7 @@
 
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   filmFlowCard,
@@ -45,6 +46,7 @@ export function PaymentSlipUpload({
       const { dataUrl: compressed, fileName: nextFileName } = await compressPaymentSlipFile(file);
       onUpload(compressed, nextFileName);
     } catch {
+      toast.error(t.payment.slipUploadFailed);
       onInteract();
     } finally {
       setProcessing(false);

@@ -34,7 +34,7 @@ export const customerCopy = {
       back: "Back"
     },
     customerInfo: {
-      step: "Step 1",
+      step: "Step 3",
       title: "Your contact info",
       subtitle: "No account needed. We only use this to update your order.",
       fullName: "Full Name",
@@ -76,7 +76,7 @@ export const customerCopy = {
       }
     },
     filmRolls: {
-      step: "Step 2",
+      step: "Step 1",
       title: "Film details",
       subtitle: "One card per roll. Most customers finish in under a minute.",
       addRoll: "Add another roll",
@@ -171,9 +171,10 @@ export const customerCopy = {
       addressError: "Please add a delivery address."
     },
     payment: {
-      step: "Step 3",
+      step: "Step 2",
       title: "Payment",
-      subtitle: "Review your total, choose how to pay, and confirm your order.",
+      subtitle: "Review your total, choose how to pay, and continue to your contact details.",
+      continueToContact: "Continue to Contact Info",
       loading: "Loading checkout...",
       totalLabel: "Total",
       orderSummaryTitle: "Order Summary",
@@ -205,6 +206,7 @@ export const customerCopy = {
       slipTitle: "Upload Payment Slip",
       slipPlaceholder: "Upload payment slip",
       slipRequired: "Please upload your payment slip.",
+      slipUploadFailed: "Could not process your payment slip. Please try another image.",
       slipProcessing: "Preparing slip...",
       removeSlip: "Remove payment slip",
       confirmOrder: "Confirm Order",
@@ -224,6 +226,8 @@ export const customerCopy = {
       discountNotEligible: "This discount is not available for this order",
       discountAppliedSuccess: "Discount applied",
       discountApplied: "Discount {code}: -฿{amount}",
+      firstOrderDiscountApplied: "First order discount applied",
+      discountCodeApplied: "{code} applied",
       discountLine: "Discount ({code})",
       welcomeGiftTitle: "Welcome Gift",
       welcomeGiftAmount: "-50 THB",
@@ -234,11 +238,11 @@ export const customerCopy = {
       welcomeGiftPromoDescriptionHighlight: "50 THB OFF",
       welcomeGiftPromoDescriptionSuffix: " your first order.",
       welcomeGiftPromoCaption: "Valid for 3 months.\nApplied automatically after LINE connection.",
-      welcomeGiftAppliedCardTitle: "✅ Welcome Gift Applied",
+      welcomeGiftAppliedCardTitle: "Welcome Gift Applied",
       welcomeGiftAppliedAmount: "50 THB OFF",
       welcomeGiftAppliedLabel: "First Order Discount",
       welcomeGiftAppliedAutoBadge: "Applied Automatically",
-      welcomeGiftSummaryApplied: "Welcome Gift Applied",
+      welcomeGiftSummaryApplied: "First order discount applied",
       welcomeGiftSummaryAmount: "-50 THB",
       welcomeGiftClaimTitle: "Get 50 THB OFF",
       welcomeGiftClaimDescription: "Connect LINE to claim your welcome gift.",
@@ -370,7 +374,7 @@ export const customerCopy = {
       back: "ย้อนกลับ"
     },
     customerInfo: {
-      step: "ขั้นตอนที่ 1",
+      step: "ขั้นตอนที่ 3",
       title: "ข้อมูลติดต่อของคุณ",
       subtitle: "ไม่ต้องสมัครสมาชิก เราใช้ข้อมูลนี้เพื่ออัปเดตออเดอร์ของคุณเท่านั้น",
       fullName: "ชื่อ-นามสกุล",
@@ -412,7 +416,7 @@ export const customerCopy = {
       }
     },
     filmRolls: {
-      step: "ขั้นตอนที่ 2",
+      step: "ขั้นตอนที่ 1",
       title: "รายละเอียดฟิล์ม",
       subtitle: "หนึ่งการ์ดต่อหนึ่งม้วน ใช้เวลาไม่ถึงนาที",
       addRoll: "เพิ่มม้วนฟิล์ม",
@@ -507,9 +511,10 @@ export const customerCopy = {
       addressError: "กรุณากรอกที่อยู่จัดส่ง"
     },
     payment: {
-      step: "ขั้นตอนที่ 3",
+      step: "ขั้นตอนที่ 2",
       title: "ชำระเงิน",
-      subtitle: "ตรวจยอดรวม เลือกช่องทางชำระเงิน และยืนยันออเดอร์",
+      subtitle: "ตรวจยอดรวม เลือกช่องทางชำระเงิน แล้วไปกรอกข้อมูลติดต่อ",
+      continueToContact: "ไปกรอกข้อมูลติดต่อ",
       loading: "กำลังโหลด...",
       totalLabel: "ยอดรวม",
       orderSummaryTitle: "สรุปออเดอร์",
@@ -541,6 +546,7 @@ export const customerCopy = {
       slipTitle: "อัปโหลดสลิปการโอนเงิน",
       slipPlaceholder: "อัปโหลดสลิปการโอนเงิน",
       slipRequired: "กรุณาอัปโหลดสลิปการโอนเงิน",
+      slipUploadFailed: "ไม่สามารถประมวลผลสลิปได้ กรุณาลองใช้รูปภาพอื่น",
       slipProcessing: "กำลังเตรียมสลิป...",
       removeSlip: "ลบสลิป",
       confirmOrder: "ยืนยันออเดอร์",
@@ -560,6 +566,8 @@ export const customerCopy = {
       discountNotEligible: "ส่วนลดนี้ไม่สามารถใช้กับออเดอร์นี้ได้",
       discountAppliedSuccess: "ใช้ส่วนลดแล้ว",
       discountApplied: "ส่วนลด {code}: -฿{amount}",
+      firstOrderDiscountApplied: "ใช้โค้ดส่วนลดครั้งแรก",
+      discountCodeApplied: "ใช้ {code} แล้ว",
       discountLine: "ส่วนลด ({code})",
       welcomeGiftTitle: "Welcome Gift",
       welcomeGiftAmount: "-50 บาท",
@@ -570,11 +578,11 @@ export const customerCopy = {
       welcomeGiftPromoDescriptionHighlight: "50 บาท",
       welcomeGiftPromoDescriptionSuffix: " สำหรับออเดอร์แรก",
       welcomeGiftPromoCaption: "ใช้ได้ภายใน 3 เดือน\nจะถูกใช้อัตโนมัติหลังเชื่อมต่อ LINE",
-      welcomeGiftAppliedCardTitle: "✅ ใช้ Welcome Gift แล้ว",
+      welcomeGiftAppliedCardTitle: "ใช้ Welcome Gift แล้ว",
       welcomeGiftAppliedAmount: "ลด 50 บาท",
       welcomeGiftAppliedLabel: "ส่วนลดออเดอร์แรก",
       welcomeGiftAppliedAutoBadge: "ใช้อัตโนมัติ",
-      welcomeGiftSummaryApplied: "Welcome Gift Applied",
+      welcomeGiftSummaryApplied: "ใช้โค้ดส่วนลดครั้งแรก",
       welcomeGiftSummaryAmount: "-50 บาท",
       welcomeGiftClaimTitle: "รับส่วนลด 50 บาท",
       welcomeGiftClaimDescription: "เชื่อมต่อ LINE เพื่อรับส่วนลดต้อนรับ",

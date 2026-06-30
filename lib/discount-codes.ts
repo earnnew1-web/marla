@@ -2,6 +2,7 @@ export const FIRST_ORDER_CODE_PREFIX = "FIRSTFILM";
 
 export const COUNTABLE_ORDER_STATUSES = [
   "Received",
+  "Pending Payment Confirmation",
   "Developing+Scanning",
   "Ready",
   "Completed"

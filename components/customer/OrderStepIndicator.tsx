@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const STEP_ROUTES = [
-  "/order/customer-info",
   "/order/film-rolls",
-  "/order/payment"
+  "/order/payment",
+  "/order/customer-info"
 ] as const;
 
 const STEP_COUNT = STEP_ROUTES.length;

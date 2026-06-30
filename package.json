@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "sh -c 'for p in 3000 3010; do lsof -ti:$p -sTCP:LISTEN 2>/dev/null | xargs kill -9 2>/dev/null; done; exec next dev -p 3000'",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

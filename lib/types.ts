@@ -133,6 +133,7 @@ export type DraftOrder = {
   payment?: PaymentInfo;
   filmDeliveryMethod?: FilmDeliveryMethod;
   discountCode?: string;
+  discountAmount?: number;
 };
 
 export type DiscountCode = {

@@ -111,6 +111,11 @@ export function serviceHasScanSize(service: FilmServiceOption | string): boolean
   return normalized !== "Dev Only";
 }
 
+/** Email is needed when any roll includes scan delivery (not Dev Only only). */
+export function orderRequiresCustomerEmail(rolls: Pick<FilmRoll, "service">[]): boolean {
+  return rolls.some((roll) => serviceHasScanSize(roll.service));
+}
+
 export function pushPullLineLabel(roll: Pick<FilmRoll, "pushPullType" | "pushPullStops">): string {
   const sign = roll.pushPullStops > 0 ? "+" : "";
   return `${roll.pushPullType === "Push (+)" ? "Push" : "Pull"} ${sign}${roll.pushPullStops}`;

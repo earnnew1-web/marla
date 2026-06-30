@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CustomerLayout } from "@/components/customer/CustomerLayout";
+import { FilmDeliveryMethodSection } from "@/components/customer/FilmDeliveryMethodSection";
 import { FilmRollCard } from "@/components/customer/FilmRollCard";
 import { FilmRollsOrderSummary } from "@/components/customer/FilmRollsOrderSummary";
 import { OrderStepIndicator } from "@/components/customer/OrderStepIndicator";
@@ -17,6 +18,7 @@ import {
   isRollValid,
   type FilmRollFieldKey
 } from "@/lib/film-roll-validation";
+import { DEFAULT_FILM_DELIVERY_METHOD } from "@/lib/film-delivery";
 import { useCustomerLanguage } from "@/lib/i18n/CustomerLanguageProvider";
 import { pageTitle, stepEyebrow } from "@/lib/typography";
 import {
@@ -31,13 +33,14 @@ import {
   type ReturnMethodFieldKey
 } from "@/lib/return-method-validation";
 import { emptyRoll, loadDraft, saveDraft } from "@/lib/storage";
-import type { FilmRoll, ReturnMethod, ReturnShippingInfo } from "@/lib/types";
+import type { FilmDeliveryMethod, FilmRoll, ReturnMethod, ReturnShippingInfo } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function FilmRollsPage() {
   const router = useRouter();
   const { t } = useCustomerLanguage();
   const [rolls, setRolls] = useState<FilmRoll[]>([]);
+  const [filmDeliveryMethod, setFilmDeliveryMethod] = useState<FilmDeliveryMethod>(DEFAULT_FILM_DELIVERY_METHOD);
   const [returnMethod, setReturnMethod] = useState<ReturnMethod>("pickup");
   const [returnShipping, setReturnShipping] = useState<ReturnShippingInfo>(emptyReturnShipping());
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -50,6 +53,7 @@ export default function FilmRollsPage() {
   useEffect(() => {
     const draft = loadDraft();
     setRolls(draft.rolls?.length ? draft.rolls : [emptyRoll()]);
+    setFilmDeliveryMethod(draft.filmDeliveryMethod ?? DEFAULT_FILM_DELIVERY_METHOD);
     const { returnMethod: method, returnShipping: shipping } = loadReturnMethodState(draft);
     setReturnMethod(method);
     if (method === "post") {
@@ -134,6 +138,7 @@ export default function FilmRollsPage() {
     saveDraft({
       ...draft,
       rolls,
+      filmDeliveryMethod,
       returnMethod,
       returnShipping,
       delivery: buildDeliveryFromReturn(draft, returnMethod, returnShipping)
@@ -141,21 +146,9 @@ export default function FilmRollsPage() {
     router.push("/order/payment");
   };
 
-  const goBack = () => {
-    const draft = loadDraft();
-    saveDraft({
-      ...draft,
-      rolls,
-      returnMethod,
-      returnShipping,
-      delivery: buildDeliveryFromReturn(draft, returnMethod, returnShipping)
-    });
-    router.push("/order/customer-info");
-  };
-
   return (
     <CustomerLayout>
-      <OrderStepIndicator current={2}>
+      <OrderStepIndicator current={1}>
         <Card className="border-0 bg-card shadow-none">
           <CardHeader className="p-5 sm:p-7">
             <p className={stepEyebrow}>{t.filmRolls.step}</p>
@@ -188,6 +181,11 @@ export default function FilmRollsPage() {
               </button>
             </div>
 
+            <FilmDeliveryMethodSection
+              filmDeliveryMethod={filmDeliveryMethod}
+              onChange={setFilmDeliveryMethod}
+            />
+
             <ReturnMethodSection
               returnMethod={returnMethod}
               returnShipping={returnShipping}
@@ -202,7 +200,7 @@ export default function FilmRollsPage() {
             <FilmRollsOrderSummary rolls={rolls} returnMethod={returnMethod} />
 
             <OrderStepNavigation
-              onBack={goBack}
+              showBack={false}
               continueLabel={t.filmRolls.continue}
               onContinue={continueNext}
               continueDisabled={rolls.length === 0}
